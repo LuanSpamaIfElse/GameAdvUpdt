@@ -42,6 +42,7 @@ class Game:
         self.water = pygame.sprite.LayeredUpdates()
         self.bosses = pygame.sprite.LayeredUpdates() # Novo grupo para o boss
         self.fire_areas = pygame.sprite.LayeredUpdates()
+        self.house = pygame.sprite.LayeredUpdates()
         
         self.shield_spritesheet = Spritesheet('sprt/img/shield.png')
         self.arrowsSpecial_spritesheet = Spritesheet('sprt/img/arrowSpecial_spr.png')
@@ -50,6 +51,7 @@ class Game:
         self.boxe_spritesheet = Spritesheet('sprt/img/boxing_glove.png')
         #self.Player1_spritesheet = Spritesheet('sprt/img/character.png')
         self.snowflakes_spritesheet = Spritesheet('sprt/img/snowflake_spr.png')
+        self.house_spritesheet = Spritesheet('sprt/img/pixel-art-house.png')
         self.terrain_spritesheet = Spritesheet('sprt/terrain/terrain.png')
         self.obstacle_spritesheet = Spritesheet('sprt/terrain/TreesSpr.png')
         self.portal_spritsheet = Spritesheet('sprt/terrain/portalpurplespr.png')
@@ -351,6 +353,8 @@ class Game:
                         Seller2NPC(self, j, i)
                     if column == "W":
                         Water1(self, j, i)
+                    if column == "H":
+                        House(self, j, i)
                     if column == "G" and self.current_level == 3:
                         Bat(self, j, i)
                     if column == "N": # Spawna Nero apenas na arena do boss
@@ -709,7 +713,7 @@ class Game:
             "Mover:   W, A, S, D ou Setas",
             "Atacar:    Barra de Espaço",
             "Habilidade:   Shift Esquerdo",
-            "Interações: F"
+            "Interações (NPC): F, Espaço"
         ]
         # Controles do Joystick
         joystick_controls = [
