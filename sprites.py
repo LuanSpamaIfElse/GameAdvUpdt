@@ -1175,6 +1175,8 @@ class Block(pygame.sprite.Sprite):
         self.rect.x = self.x
         self.rect.y = self.y
 
+
+
 class House(pygame.sprite.Sprite):
     def __init__(self, game, x, y):
         self.game = game
@@ -2373,3 +2375,46 @@ class Coin(pygame.sprite.Sprite):
             self.current_frame = (self.current_frame + 1) % len(self.animation_frames)
             self.image = self.animation_frames[self.current_frame]
             self.image.set_colorkey(BLACK)
+
+            #melancias (Evangelion)
+class Watermelon(pygame.sprite.Sprite):
+    def __init__(self, game, x, y):
+        self.game = game
+        self._layer = BLOCK_LAYER
+        self.groups = self.game.all_sprites, self.game.blocks
+        pygame.sprite.Sprite.__init__(self, self.groups)
+
+        # Posição do bloco
+        self.x = x * TILESIZES
+        self.y = y * TILESIZES
+        self.width = TILESIZES
+        self.height = TILESIZES
+
+        # Define a aparência do bloco
+        self.image = self.game.watermelon_spritesheet.get_sprite(0, 0, self.width, self.height)
+
+        # Define o retângulo de colisão
+        self.rect = self.image.get_rect()
+        self.rect.x = self.x
+        self.rect.y = self.y
+
+class Water_Watermelon(pygame.sprite.Sprite):
+    def __init__(self, game, x, y):
+        self.game = game
+        self._layer = BLOCK_LAYER
+        self.groups = self.game.all_sprites, self.game.blocks
+        pygame.sprite.Sprite.__init__(self, self.groups)
+
+        # Posição do bloco
+        self.x = x * TILESIZES
+        self.y = y * TILESIZES
+        self.width = TILESIZES
+        self.height = TILESIZES
+
+        # Define a aparência do bloco
+        self.image = self.game.watermelon_spritesheet.get_sprite(0, 32, self.width, self.height)
+
+        # Define o retângulo de colisão
+        self.rect = self.image.get_rect()
+        self.rect.x = self.x
+        self.rect.y = self.y
