@@ -43,6 +43,7 @@ class Game:
         self.bosses = pygame.sprite.LayeredUpdates() # Novo grupo para o boss
         self.fire_areas = pygame.sprite.LayeredUpdates()
         self.house = pygame.sprite.LayeredUpdates()
+        self.watermelon = pygame.sprite.LayeredUpdates()
         
         self.shield_spritesheet = Spritesheet('sprt/img/shield.png')
         self.arrowsSpecial_spritesheet = Spritesheet('sprt/img/arrowSpecial_spr.png')
@@ -50,6 +51,7 @@ class Game:
         self.boxer_spritesheet = Spritesheet(PLAYER3_ATTR["animation_sheet"])
         self.boxe_spritesheet = Spritesheet('sprt/img/boxing_glove.png')
         #self.Player1_spritesheet = Spritesheet('sprt/img/character.png')
+        self.watermelon_spritesheet = Spritesheet("sprt/img/watermelon.png")
         self.snowflakes_spritesheet = Spritesheet('sprt/img/snowflake_spr.png')
         self.house_spritesheet = Spritesheet('sprt/img/pixel-art-house.png')
         self.terrain_spritesheet = Spritesheet('sprt/terrain/terrain.png')
@@ -330,36 +332,54 @@ class Game:
             # Cria os sprites baseados no tilemap
             for i, row in enumerate(temp_tilemap):
                 for j, column in enumerate(row):
-                    Ground1(self, j, i)
-                    if column == "B":
+                    Ground1(self, j, i)#Chão
+
+                    if column == "B":#bloco
                         Block(self, j, i)
-                    if column == "E" and force_map not in ['store', 'boss_arena']:  # Só inimigos fora da loja e arena do boss
+
+                    if column == "E" and force_map not in ['store', 'boss_arena']:  # inimigo (segue)
                         enemy(self, j, i)
+
                     if column == "C" and force_map not in ['store', 'boss_arena']:
-                        EnemyCoin(self, j, i)
+                        EnemyCoin(self, j, i)#inimigo com moeda
+
                     if column == "P" and create_player:
                         self.player = Player(self, j, i)
+
                     if column == "Q":
-                        Plant(self, j, i)
+                        Plant(self, j, i)#plantas
+
                     if column == "O" and force_map not in ['store', 'boss_arena'] and self.current_level != 2:
-                        Obstacle(self, j, i)
-                    if column == "S":
+                        Obstacle(self, j, i)#Obstaclos
+
+                    if column == "S":#slime
                         SlimeNPC(self, j, i)
-                    if column == "T":
+
+                    if column == "T":#portal
                         Portal(self, j, i)
-                    if column == "M":
+
+                    if column == "M":#vendedor não funcional
                         Seller1NPC(self, j, i)
-                    if column == "V":
+
+                    if column == "V":#vendedor (funcional)
                         Seller2NPC(self, j, i)
-                    if column == "W":
+
+                    if column == "W":#Água
                         Water1(self, j, i)
-                    if column == "H":
+
+                    if column == "H":#casa
                         House(self, j, i)
+
                     if column == "G" and self.current_level == 3:
-                        Bat(self, j, i)
-                    if column == "N": # Spawna Nero apenas na arena do boss
+                        Bat(self, j, i)#Morcego
+
+                    if column == "N": # Spawna boss
                         self.nero = Nero(self, j, i)
-                        
+                    
+                    if column == "!": #MELANCIAS
+                        Water_Watermelon(self, j, i)
+                    if column == "Z":#Melancia na água (evangelion)
+                        Watermelon(self, j, i)
         except Exception as e:
             print(f"Erro ao criar tilemap: {e}")
             # Tenta recarregar o nível anterior
@@ -383,7 +403,7 @@ class Game:
         except Exception as e:
             print(f"Erro ao carregar música: {e}")
         self.playing = True
-        self.current_level = 1  # Sempre começa no nível 1
+        self.current_level = 2  # Sempre começa no nível 1
         
         # Limpa todos os sprites
 
@@ -446,7 +466,7 @@ class Game:
             
             # Controle de joystick - Ataque (Botão 2)
             if event.type == pygame.JOYBUTTONDOWN:
-                if event.button == 8: # Geralmente o botão "Start" ou "Menu"
+                if event.button == 9: # Geralmente o botão "Start" ou "Menu"
                     self.paused = not self.paused
                 if event.button == 1 and hasattr(self, 'player') and self.player.can_attack() and self.player.life > 0:  # Botão 2 (geralmente A no Xbox, X no PS)
                     self.player.last_attack_time = pygame.time.get_ticks()
@@ -713,7 +733,7 @@ class Game:
             "Mover:   W, A, S, D ou Setas",
             "Atacar:    Barra de Espaço",
             "Habilidade:   Shift Esquerdo",
-            "Interações (NPC): F, Espaço"
+            "Interações: F"
         ]
         # Controles do Joystick
         joystick_controls = [
