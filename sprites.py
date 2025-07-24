@@ -368,9 +368,30 @@ class Player(pygame.sprite.Sprite):
         hits_enemies = pygame.sprite.spritecollide(self, self.game.enemies, False)
         hits_bats = pygame.sprite.spritecollide(self, self.game.bats, False)
         
+        # Combina as duas listas de colisões em uma só
+        all_hits = hits_enemies + hits_bats
+        
         # Se colidiu com qualquer inimigo e não está invulnerável
-        if (hits_enemies or hits_bats) and not self.invulnerable:
-            self.take_damage()
+        if all_hits and not self.invulnerable:
+            self.take_damage() # Aplica dano e invulnerabilidade
+
+            # --- Lógica de Knockback ---
+            knockback_strength = 25 # Força do empurrão em pixels
+            enemy_hit = all_hits[0] # Pega o primeiro inimigo da colisão para o cálculo
+
+            # Calcula o vetor do inimigo para o jogador
+            dx = self.rect.centerx - enemy_hit.rect.centerx
+            dy = self.rect.centery - enemy_hit.rect.centery
+            
+            dist = math.hypot(dx, dy)
+            if dist != 0:
+                # Normaliza o vetor e aplica o empurrão
+                push_x = (dx / dist) * knockback_strength
+                push_y = (dy / dist) * knockback_strength
+
+                # Aplica o empurrão diretamente na posição do rect
+                self.rect.x += push_x
+                self.rect.y += push_y
     def collide_blocks(self, direction):
     # Colisão apenas com blocos normais (não inclui água)
         hits = pygame.sprite.spritecollide(self, self.game.blocks, False)
@@ -875,8 +896,18 @@ class enemy(pygame.sprite.Sprite):
         if health_width > 0:
             pygame.draw.rect(surface, health_color, health_rect)
 
-    def take_damage(self, amount):
+    def take_damage(self, amount, direction=None):
         self.life -= amount
+        if direction:
+            knockback_strength = 15
+            if direction == 'left':
+                self.rect.x -= knockback_strength
+            elif direction == 'right':
+                self.rect.x += knockback_strength
+            elif direction == 'up':
+                self.rect.y -= knockback_strength
+            elif direction == 'down':
+                self.rect.y += knockback_strength
         if self.life <= 0:
             self.kill()
 
@@ -1066,8 +1097,18 @@ class EnemyCoin(pygame.sprite.Sprite):
         if health_width > 0:
             pygame.draw.rect(surface, health_color, health_rect)
 
-    def take_damage(self, amount):
+    def take_damage(self, amount, direction=None):
         self.life -= amount
+        if direction:
+            knockback_strength = 15
+            if direction == 'left':
+                self.rect.x -= knockback_strength
+            elif direction == 'right':
+                self.rect.x += knockback_strength
+            elif direction == 'up':
+                self.rect.y -= knockback_strength
+            elif direction == 'down':
+                self.rect.y += knockback_strength
         if self.life <= 0:
             self.kill()
 
@@ -1536,11 +1577,21 @@ class Nero(pygame.sprite.Sprite):
         self.attacking = False
 
     # CORRIGIDO: Lógica de dano e invulnerabilidade
-    def take_damage(self, amount):
+    def take_damage(self, amount, direction=None):
         if not self.invulnerable:
             self.life -= amount
             self.invulnerable = True
             self.invulnerable_time = pygame.time.get_ticks()
+            if direction:
+                knockback_strength = 5 # Boss tem mais resistência
+                if direction == 'left':
+                    self.rect.x -= knockback_strength
+                elif direction == 'right':
+                    self.rect.x += knockback_strength
+                elif direction == 'up':
+                    self.rect.y -= knockback_strength
+                elif direction == 'down':
+                    self.rect.y += knockback_strength
 
     def draw_health_bar(self):
         bar_x = self.rect.x
@@ -1626,13 +1677,13 @@ class SwordAttack(pygame.sprite.Sprite):
             damage = PLAYER1_ATTR["damage"]
 
         for enemy in hits_enemies:
-            enemy.take_damage(damage)
+            enemy.take_damage(damage, self.direction)
 
         for bats in hits_bats:
-            bats.take_damage(damage)
+            bats.take_damage(damage, self.direction)
 
         for boss in hits_bosses:
-            boss.take_damage(damage)
+            boss.take_damage(damage, self.direction)
 
     def update(self):
         self.animate()
@@ -1801,15 +1852,15 @@ class Arrow(pygame.sprite.Sprite):
         
         # Damage enemies and disappear
         for enemy in hits_enemies:
-            enemy.take_damage(self.damage)
+            enemy.take_damage(self.damage, self.direction)
             self.kill()
             
         for bat in hits_bats:
-            bat.take_damage(self.damage)
+            bat.take_damage(self.damage, self.direction)
             self.kill()
             
         for boss in hits_bosses:
-            boss.take_damage(self.damage)
+            boss.take_damage(self.damage, self.direction)
             self.kill()
 
     def fall(self):
@@ -1850,13 +1901,13 @@ class Boxing(pygame.sprite.Sprite):
             damage = PLAYER3_ATTR["damage"]  # Dano alto para o boxeador
 
         for enemy in hits_enemies:
-            enemy.take_damage(damage)
+            enemy.take_damage(damage, self.direction)
 
         for bats in hits_bats:
-            bats.take_damage(damage)
+            bats.take_damage(damage, self.direction)
 
         for boss in hits_bosses:
-            boss.take_damage(damage)
+            boss.take_damage(damage, self.direction)
 
     def update(self):
         self.animate()
