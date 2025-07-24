@@ -403,7 +403,7 @@ class Game:
         except Exception as e:
             print(f"Erro ao carregar música: {e}")
         self.playing = True
-        self.current_level = 2  # Sempre começa no nível 1
+        self.current_level = 1  # Sempre começa no nível 1
         
         # Limpa todos os sprites
 
@@ -422,37 +422,42 @@ class Game:
             
 
     def events(self):
+        # Verifica se a loja está ativa para desabilitar o pause
+        shop_active = any(isinstance(npc, Seller2NPC) and npc.shop_active for npc in self.npcs)
+
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 self.running = False
                 self.playing = False
                 return
+
             if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_ESCAPE:
+                # Só permite pausar se a loja NÃO estiver ativa
+                if event.key == pygame.K_ESCAPE and not shop_active:
                     self.paused = not self.paused
                 
                 # Controle de Volume
-                if event.key == pygame.K_PLUS or event.key == pygame.K_EQUALS:
+                elif event.key == pygame.K_PLUS or event.key == pygame.K_EQUALS:
                     self.music_volume += 0.05
                     if self.music_volume > 1.0:
                         self.music_volume = 1.0
                     pygame.mixer.music.set_volume(self.music_volume)
                 
-                if event.key == pygame.K_MINUS:
+                elif event.key == pygame.K_MINUS:
                     self.music_volume -= 0.05
                     if self.music_volume < 0.0:
                         self.music_volume = 0.0
                     pygame.mixer.music.set_volume(self.music_volume)
-                # --- FIM DO NOVO BLOCO DE VOLUME ---
 
-                #Controle de controles
-            if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_F11:
+                # Controle de tela cheia
+                elif event.key == pygame.K_F11:
                     if self.screen.get_flags() & pygame.FULLSCREEN:
                         self.screen = pygame.display.set_mode((WIN_WIDTH, WIN_HEIGHT))
                     else:
                         self.screen = pygame.display.set_mode((WIN_WIDTH, WIN_HEIGHT), pygame.FULLSCREEN)
-                if event.key == pygame.K_SPACE:
+                
+                # Controle de diálogo e ataque
+                elif event.key == pygame.K_SPACE:
                     if hasattr(self, 'dialog_box') and self.dialog_box.active:
                         if self.dialog_box.text_progress < len(self.dialog_box.current_text):
                             self.dialog_box.text_progress = len(self.dialog_box.current_text)
@@ -464,21 +469,25 @@ class Game:
                         self.player.last_attack_time = pygame.time.get_ticks()
                         self.perform_attack()
             
-            # Controle de joystick - Ataque (Botão 2)
+            # Controle de joystick
             if event.type == pygame.JOYBUTTONDOWN:
-                if event.button == 9: # Geralmente o botão "Start" ou "Menu"
+                # Só permite pausar se a loja NÃO estiver ativa
+                if event.button == 9 and not shop_active:
                     self.paused = not self.paused
-                if event.button == 1 and hasattr(self, 'player') and self.player.can_attack() and self.player.life > 0:  # Botão 2 (geralmente A no Xbox, X no PS)
-                    self.player.last_attack_time = pygame.time.get_ticks()
-                    self.perform_attack()
+                
+                # Ataque/Interação com Joystick
+                elif event.button == 1:
+                    if hasattr(self, 'dialog_box') and self.dialog_box.active:
+                        if self.dialog_box.text_progress < len(self.dialog_box.current_text):
+                            self.dialog_box.text_progress = len(self.dialog_box.current_text)
+                            self.dialog_box.visible_text = self.dialog_box.current_text
+                        else:
+                            if not self.dialog_box.next_dialog():
+                                self.dialog_box.close()
+                    elif hasattr(self, 'player') and self.player.can_attack() and self.player.life > 0:
+                        self.player.last_attack_time = pygame.time.get_ticks()
+                        self.perform_attack()
 
-                if event.button == 1 and hasattr(self, 'dialog_box') and self.dialog_box.active:
-                    if self.dialog_box.text_progress < len(self.dialog_box.current_text):
-                        self.dialog_box.text_progress = len(self.dialog_box.current_text)
-                        self.dialog_box.visible_text = self.dialog_box.current_text
-                    else:
-                        if not self.dialog_box.next_dialog():
-                            self.dialog_box.close()
                 
     def archer_attack(self):
         """Cria e lança uma flecha a partir da posição do jogador."""
