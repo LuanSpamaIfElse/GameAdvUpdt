@@ -305,6 +305,7 @@ class Player(pygame.sprite.Sprite):
             return
 
         keys = pygame.key.get_pressed()
+        mouse_pressed = pygame.mouse.get_pressed()  # <-- ADICIONADO PARA LER O MOUSE
         self.x_change, self.y_change = 0, 0
         
         current_speed = (self.base_speed + self.speed_boost) * (self.slow_modifier if self.is_in_water else 1)
@@ -335,8 +336,8 @@ class Player(pygame.sprite.Sprite):
                 self.y_change += axis_y * current_speed
                 self.facing = 'down' if axis_y > 0 else 'up'
         
-        # Esquiva (para espadachim) ou Escudo (para boxeador)
-        if (keys[pygame.K_LSHIFT] or keys[pygame.K_RSHIFT]):
+        # Habilidade Especial (SHIFT do Teclado OU Botão Direito do Mouse)
+        if (keys[pygame.K_LSHIFT] or keys[pygame.K_RSHIFT] or mouse_pressed[2]):  # mouse_pressed[2] é o botão direito
             if self.char_type == 'swordsman' and self.can_dodge():
                 self.last_dodge_time = pygame.time.get_ticks()
                 self.x_change *= self.dodge_speed_multiplier
@@ -348,12 +349,15 @@ class Player(pygame.sprite.Sprite):
             elif self.char_type == 'boxer':
                 self.activate_shield()
                 
+        # Habilidade Especial (Joystick)
         if hasattr(self.game, 'joystick') and self.game.joystick:
-            if self.game.joystick.get_button(2):  # Botão X (Xbox) ou Quadrado (PS)
+            if self.game.joystick.get_button(2):  # Botão de habilidade no controle
                 if self.char_type == 'swordsman' and self.can_dodge():
                     self.last_dodge_time = pygame.time.get_ticks()
                     self.x_change *= self.dodge_speed_multiplier
                     self.y_change *= self.dodge_speed_multiplier
+                elif self.char_type == 'archer': # <-- LÓGICA DO ARQUEIRO ADICIONADA AQUI
+                    self.activate_special_arrows()
                 elif self.char_type == 'boxer':
                     self.activate_shield()
 
@@ -364,7 +368,7 @@ class Player(pygame.sprite.Sprite):
 
 
     def collide_enemy(self):
-    # Verifica colisão com inimigos normais e morcegos
+        # Verifica colisão com inimigos normais e morcegos
         hits_enemies = pygame.sprite.spritecollide(self, self.game.enemies, False)
         hits_bats = pygame.sprite.spritecollide(self, self.game.bats, False)
         
@@ -376,7 +380,7 @@ class Player(pygame.sprite.Sprite):
             self.take_damage() # Aplica dano e invulnerabilidade
 
             # --- Lógica de Knockback ---
-            knockback_strength = 25 # Força do empurrão em pixels
+            knockback_strength = 15 # Força do empurrão em pixels
             enemy_hit = all_hits[0] # Pega o primeiro inimigo da colisão para o cálculo
 
             # Calcula o vetor do inimigo para o jogador
@@ -384,14 +388,31 @@ class Player(pygame.sprite.Sprite):
             dy = self.rect.centery - enemy_hit.rect.centery
             
             dist = math.hypot(dx, dy)
-            if dist != 0:
-                # Normaliza o vetor e aplica o empurrão
-                push_x = (dx / dist) * knockback_strength
-                push_y = (dy / dist) * knockback_strength
+            if dist == 0:  # Evita divisão por zero se o centro for o mesmo
+                dist = 1
+                dx = 1
 
-                # Aplica o empurrão diretamente na posição do rect
-                self.rect.x += push_x
-                self.rect.y += push_y
+            # Normaliza o vetor e calcula o empurrão
+            push_x = (dx / dist) * knockback_strength
+            push_y = (dy / dist) * knockback_strength
+
+            # Aplica o empurrão em X e resolve a colisão com blocos imediatamente
+            self.rect.x += push_x
+            hits_blocks = pygame.sprite.spritecollide(self, self.game.blocks, False)
+            for block in hits_blocks:
+                if push_x > 0:  # Se foi empurrado para a direita
+                    self.rect.right = block.rect.left
+                elif push_x < 0:  # Se foi empurrado para a esquerda
+                    self.rect.left = block.rect.right
+            
+            # Aplica o empurrão em Y e resolve a colisão com blocos imediatamente
+            self.rect.y += push_y
+            hits_blocks = pygame.sprite.spritecollide(self, self.game.blocks, False)
+            for block in hits_blocks:
+                if push_y > 0:  # Se foi empurrado para baixo
+                    self.rect.bottom = block.rect.top
+                elif push_y < 0:  # Se foi empurrado para cima
+                    self.rect.top = block.rect.bottom
     def collide_blocks(self, direction):
     # Colisão apenas com blocos normais (não inclui água)
         hits = pygame.sprite.spritecollide(self, self.game.blocks, False)
@@ -743,10 +764,46 @@ class Bat(pygame.sprite.Sprite):
         if health_width > 0:
             pygame.draw.rect(surface, health_color, health_rect)
 
-    def take_damage(self, amount):
+    def take_damage(self, amount, direction=None):
         self.life -= amount
         if self.life <= 0:
             self.kill()
+            return
+
+        if direction:
+            knockback_strength = 15
+            
+            push_x, push_y = 0, 0
+            if direction == 'left':
+                push_x = -knockback_strength
+            elif direction == 'right':
+                push_x = knockback_strength
+            elif direction == 'up':
+                push_y = -knockback_strength
+            elif direction == 'down':
+                push_y = knockback_strength
+
+            # Aplica o empurrão em X e resolve a colisão imediatamente
+            if push_x != 0:
+                self.rect.x += push_x
+                all_obstacles = self.game.blocks.sprites() + self.game.water.sprites()
+                hits = pygame.sprite.spritecollide(self, all_obstacles, False)
+                for obstacle in hits:
+                    if push_x > 0:
+                        self.rect.right = obstacle.rect.left
+                    elif push_x < 0:
+                        self.rect.left = obstacle.rect.right
+
+            # Aplica o empurrão em Y e resolve a colisão imediatamente
+            if push_y != 0:
+                self.rect.y += push_y
+                all_obstacles = self.game.blocks.sprites() + self.game.water.sprites()
+                hits = pygame.sprite.spritecollide(self, all_obstacles, False)
+                for obstacle in hits:
+                    if push_y > 0:
+                        self.rect.bottom = obstacle.rect.top
+                    elif push_y < 0:
+                        self.rect.top = obstacle.rect.bottom
 
     def update(self):
         self.movement()
@@ -898,18 +955,46 @@ class enemy(pygame.sprite.Sprite):
 
     def take_damage(self, amount, direction=None):
         self.life -= amount
-        if direction:
-            knockback_strength = 15
-            if direction == 'left':
-                self.rect.x -= knockback_strength
-            elif direction == 'right':
-                self.rect.x += knockback_strength
-            elif direction == 'up':
-                self.rect.y -= knockback_strength
-            elif direction == 'down':
-                self.rect.y += knockback_strength
         if self.life <= 0:
             self.kill()
+            return  # Sai da função se o inimigo morreu
+
+        if direction:
+            knockback_strength = 15
+            
+            push_x, push_y = 0, 0
+            if direction == 'left':
+                push_x = -knockback_strength
+            elif direction == 'right':
+                push_x = knockback_strength
+            elif direction == 'up':
+                push_y = -knockback_strength
+            elif direction == 'down':
+                push_y = knockback_strength
+
+            # Aplica o empurrão em X e resolve a colisão imediatamente
+            if push_x != 0:
+                self.rect.x += push_x
+                # Verifica colisão com blocos e água
+                all_obstacles = self.game.blocks.sprites() + self.game.water.sprites()
+                hits = pygame.sprite.spritecollide(self, all_obstacles, False)
+                for obstacle in hits:
+                    if push_x > 0:  # Empurrado para a direita
+                        self.rect.right = obstacle.rect.left
+                    elif push_x < 0:  # Empurrado para a esquerda
+                        self.rect.left = obstacle.rect.right
+
+            # Aplica o empurrão em Y e resolve a colisão imediatamente
+            if push_y != 0:
+                self.rect.y += push_y
+                # Verifica colisão com blocos e água
+                all_obstacles = self.game.blocks.sprites() + self.game.water.sprites()
+                hits = pygame.sprite.spritecollide(self, all_obstacles, False)
+                for obstacle in hits:
+                    if push_y > 0:  # Empurrado para baixo
+                        self.rect.bottom = obstacle.rect.top
+                    elif push_y < 0:  # Empurrado para cima
+                        self.rect.top = obstacle.rect.bottom
 
     def update(self):
         self.movement()
@@ -1099,18 +1184,46 @@ class EnemyCoin(pygame.sprite.Sprite):
 
     def take_damage(self, amount, direction=None):
         self.life -= amount
-        if direction:
-            knockback_strength = 15
-            if direction == 'left':
-                self.rect.x -= knockback_strength
-            elif direction == 'right':
-                self.rect.x += knockback_strength
-            elif direction == 'up':
-                self.rect.y -= knockback_strength
-            elif direction == 'down':
-                self.rect.y += knockback_strength
         if self.life <= 0:
             self.kill()
+            return  # Sai da função se o inimigo morreu
+
+        if direction:
+            knockback_strength = 15
+            
+            push_x, push_y = 0, 0
+            if direction == 'left':
+                push_x = -knockback_strength
+            elif direction == 'right':
+                push_x = knockback_strength
+            elif direction == 'up':
+                push_y = -knockback_strength
+            elif direction == 'down':
+                push_y = knockback_strength
+
+            # Aplica o empurrão em X e resolve a colisão imediatamente
+            if push_x != 0:
+                self.rect.x += push_x
+                # Verifica colisão com blocos e água
+                all_obstacles = self.game.blocks.sprites() + self.game.water.sprites()
+                hits = pygame.sprite.spritecollide(self, all_obstacles, False)
+                for obstacle in hits:
+                    if push_x > 0:  # Empurrado para a direita
+                        self.rect.right = obstacle.rect.left
+                    elif push_x < 0:  # Empurrado para a esquerda
+                        self.rect.left = obstacle.rect.right
+
+            # Aplica o empurrão em Y e resolve a colisão imediatamente
+            if push_y != 0:
+                self.rect.y += push_y
+                # Verifica colisão com blocos e água
+                all_obstacles = self.game.blocks.sprites() + self.game.water.sprites()
+                hits = pygame.sprite.spritecollide(self, all_obstacles, False)
+                for obstacle in hits:
+                    if push_y > 0:  # Empurrado para baixo
+                        self.rect.bottom = obstacle.rect.top
+                    elif push_y < 0:  # Empurrado para cima
+                        self.rect.top = obstacle.rect.bottom
 
     def update(self):
         self.movement()
