@@ -403,7 +403,7 @@ class Game:
         except Exception as e:
             print(f"Erro ao carregar música: {e}")
         self.playing = True
-        self.current_level = 1  # Sempre começa no nível 1
+        self.current_level = 1  # Sstart nível 1
         
         # Limpa todos os sprites
 
@@ -484,6 +484,22 @@ class Game:
                         else:
                             if not self.dialog_box.next_dialog():
                                 self.dialog_box.close()
+                    elif hasattr(self, 'player') and self.player.can_attack() and self.player.life > 0:
+                        self.player.last_attack_time = pygame.time.get_ticks()
+                        self.perform_attack()
+
+            # --- NOVO: CONTROLE DE ATAQUE COM O MOUSE ---
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                if event.button == 1:  # Botão esquerdo do mouse
+                    # Verifica se um diálogo está ativo
+                    if hasattr(self, 'dialog_box') and self.dialog_box.active:
+                        if self.dialog_box.text_progress < len(self.dialog_box.current_text):
+                            self.dialog_box.text_progress = len(self.dialog_box.current_text)
+                            self.dialog_box.visible_text = self.dialog_box.current_text
+                        else:
+                            if not self.dialog_box.next_dialog():
+                                self.dialog_box.close()
+                    # Se não houver diálogo, executa o ataque
                     elif hasattr(self, 'player') and self.player.can_attack() and self.player.life > 0:
                         self.player.last_attack_time = pygame.time.get_ticks()
                         self.perform_attack()
