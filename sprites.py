@@ -17,6 +17,7 @@ class Spritesheet:
 
 class Player(pygame.sprite.Sprite):
     def __init__(self, game, x, y):
+        self.id = None
         self.game = game
         self._layer = PLAYER_LAYER
         self.groups = [self.game.all_sprites]  #uma lista
@@ -256,21 +257,28 @@ class Player(pygame.sprite.Sprite):
                 self.last_water_damage_time = current_time
 
     def update(self):
+        # Apenas o jogador local deve processar o movimento baseado em input
+        is_local_player = (self.id == self.game.player_id)
         self.update_shield()
         self.update_special_arrows()
-        self.movement()
+        
+        if is_local_player:
+            self.movement()
         self.animate()
         self.handle_water()
-        self.collide_enemy()
         # Aplica o movimento
-        self.rect.x += self.x_change
-        self.collide_blocks('x')
-        self.x = self.rect.x
-
-        self.rect.y += self.y_change
-        self.collide_blocks('y')
-        self.y = self.rect.y
         
+        if is_local_player:
+            self.collide_enemy()
+            # Aplica o movimento
+            self.rect.x += self.x_change
+            self.collide_blocks('x')
+            self.x = self.rect.x
+
+            self.rect.y += self.y_change
+            self.collide_blocks('y')
+            self.y = self.rect.y
+
         # Verifica se está na água e causa dano (1 por segundo)
         bottom_half_rect = pygame.Rect(
             self.rect.left,
@@ -296,8 +304,10 @@ class Player(pygame.sprite.Sprite):
             self.invulnerable = False
         
         # Reseta os valores de movimento após cada frame
-        self.x_change = 0
-        self.y_change = 0
+        if is_local_player:
+            self.x_change = 0
+            self.y_change = 0
+
 
     def movement(self):
         shop_active = any(isinstance(npc, Seller2NPC) and npc.shop_active for npc in self.game.npcs)
