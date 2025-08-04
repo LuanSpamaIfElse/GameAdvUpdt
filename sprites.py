@@ -527,7 +527,8 @@ class Ground1(pygame.sprite.Sprite):
             1: game.terrain_spritesheet.get_sprite(0, 352, self.width, self.height),
             2: game.terrain_spritesheet.get_sprite(256, 352, self.width+6, self.height),
             3: game.terrain_spritesheet.get_sprite(925, 703, self.width+6, self.height),
-            4: game.terrain_spritesheet.get_sprite(576, 544, self.width+4, self.height)
+            4: game.terrain_spritesheet.get_sprite(576, 544, self.width+4, self.height),
+            5: game.terrain_spritesheet.get_sprite(0, 352, self.width, self.height)
         }
         
         # Carrega o sprite baseado no nível atual
@@ -562,11 +563,16 @@ class Water1(pygame.sprite.Sprite):
         # Carrega os frames de animação para cada nível
         self.tilemap_animations = {
             1: [
-                game.terrain_spritesheet.get_sprite(0, 352, self.width, self.height),
-                game.terrain_spritesheet.get_sprite(32, 352, self.width, self.height),
-                game.terrain_spritesheet.get_sprite(64, 352, self.width, self.height)
+                game.terrain_spritesheet.get_sprite(864, 160, self.width, self.height),
+                game.terrain_spritesheet.get_sprite(894, 160, self.width, self.height),
+                game.terrain_spritesheet.get_sprite(924,160, self.width, self.height)
             ],
             2: [
+                game.terrain_spritesheet.get_sprite(864, 160, self.width, self.height),
+                game.terrain_spritesheet.get_sprite(894, 160, self.width, self.height),
+                game.terrain_spritesheet.get_sprite(924,160, self.width, self.height)
+            ],
+            5: [
                 game.terrain_spritesheet.get_sprite(864, 160, self.width, self.height),
                 game.terrain_spritesheet.get_sprite(894, 160, self.width, self.height),
                 game.terrain_spritesheet.get_sprite(924,160, self.width, self.height)
@@ -618,11 +624,12 @@ class Plant(pygame.sprite.Sprite):
         self.height = TILESIZES
 
         # Diferentes sprites para cada nível
-        self.level_sprites = {
+        self.level_sprites = { #game.plant = terrain.png
             1: self.game.plant_spritesheet.get_sprite(510, 352, self.width, self.height),
             2: self.game.plant_spritesheet.get_sprite(352, 544, self.width, self.height),
             3: self.game.plant_spritesheet.get_sprite(993, 515, self.width, self.height),
-            4: self.game.plant_spritesheet.get_sprite(581, 421, self.width, self.height) # Exemplo com coordenadas diferentes
+            4: self.game.plant_spritesheet.get_sprite(581, 421, self.width, self.height),
+            5: self.game.plant_spritesheet.get_sprite(736, 915, 30, 60)# Exemplo com coordenadas diferentes
         }
         
         self.update_sprite()
@@ -1355,12 +1362,28 @@ class House(pygame.sprite.Sprite):
         self.height = TILESIZES
 
         # Define a aparência do bloco
-        self.image = self.game.house_spritesheet.get_sprite(55, 38, 150, 190)
-
+        self.animation_frames = {
+            'idle' : [
+                self.game.house_spritesheet.get_sprite(55, 38, 150, 190),
+                self.game.house_spritesheet.get_sprite( 55, 290, 150, 150)
+            ]
+        }
+        
+        self.current_frame = 0
+        self.animation_speed = 30
+        self.animation_counter = 0
+        self.image = self.animation_frames['idle'][self.current_frame]
+        
         # Define o retângulo de colisão
         self.rect = self.image.get_rect()
         self.rect.x = self.x
         self.rect.y = self.y
+    def animate(self):
+        self.animation_counter += 1
+        if self.animation_counter >= self.animation_speed:
+            self.animation_counter = 0
+            self.current_frame = (self.current_frame + 1) % len(self.animation_frames['idle'])
+            self.image = self.animation_frames['idle'][self.current_frame]
 
 class AbilityPanel:
     def __init__(self, game):
@@ -1486,7 +1509,8 @@ class Obstacle(pygame.sprite.Sprite):
             1: self.game.obstacle_spritesheet.get_sprite(640, 203, self.width-4, self.height-4),  # Tronco
             2: self.game.obstacle_spritesheet.get_sprite(670, 260, self.width, self.height),
             3: self.game.plant_spritesheet.get_sprite(994, 545, self.width, self.height),
-            4: self.game.plant_spritesheet.get_sprite(928, 480, self.width, self.height)
+            4: self.game.plant_spritesheet.get_sprite(928, 480, self.width, self.height),
+            5: self.game.obstacle_spritesheet.get_sprite(753, 915, 12, 13)
         }
         
         self.update_sprite()
