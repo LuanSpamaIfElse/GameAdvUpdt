@@ -78,7 +78,7 @@ PLAYER2_ATTR = {
 PLAYER3_ATTR = {
     "name": "Harald",
     "life": 25,
-    "damage": 9,
+    "damage": 20,
     "speed": 3,
     "sprite": "sprt/PLAYERS/player3tst.png",
     # ALTERADO para a spritesheet do boxeador
@@ -308,6 +308,28 @@ tilemap4 = [
     'B.Q...........................C....Q...C.........B',
     'B..................................Q.............B',
     'BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB'
+]
+tilemap5 = [
+    'BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB',
+    'B...........................E..Q............................C..............B',
+    'BP.............................Q.E.........................................B',
+    'B...........................QQQQ...........................QQQQQQQQQQQQQQQQB',
+    'B.M.V.S........................Q........................G...Q............T.B',
+    'B...........................E..Q............................Q.E............B',
+    'B..............................Q............................QQQQQQQQQQQQQQQB',
+    'BWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW...WWWWWWWWWWWWWWWWWWWWWWWWWW.............B',
+    'B....................................C.....................................B',
+    'B..........................................................................B',
+    'B...QQQQQQQQQQQQQQ...................QQQQQQQQQQQQQQQQQQQ...WWWWWWWWWWWWWWWWWB',
+    'B...Q.E.......C..Q...................................E.Q...................B',
+    'B...Q............Q.....................................Q.....E.............B',
+    'B...Q..O...O.....Q...........................O....O......Q...................B',
+    'B...Q............Q.....................................Q................G..B',
+    'B...Q.G.O........Q...E.....................C.............Q...................B',
+    'B...QQQQQQQQQQQQQQ...................QQQQQQQQQQQQQQQQQQQ...WWWWWWWWWWWWWWWWWB',
+    'B................E.........................................................B',
+    'B............C......................................Z.!!.................B',
+    'BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB',
 ]
 store = [
     'BBBBBBBBBBBBBBBBBBBBBBBBBB',
