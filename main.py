@@ -61,7 +61,7 @@ class Game:
         self.boxe_spritesheet = Spritesheet('sprt/img/boxing_glove.png')
         self.watermelon_spritesheet = Spritesheet("sprt/img/watermelon.png")
         self.snowflakes_spritesheet = Spritesheet('sprt/img/snowflake_spr.png')
-        self.house_spritesheet = Spritesheet('sprt/img/pixel-art-house.png')
+        self.house_spritesheet = Spritesheet('sprt/img/house_spr.png')
         self.terrain_spritesheet = Spritesheet('sprt/terrain/terrain.png')
         self.obstacle_spritesheet = Spritesheet('sprt/terrain/TreesSpr.png')
         self.portal_spritsheet = Spritesheet('sprt/terrain/portalpurplespr.png')
@@ -373,6 +373,8 @@ class Game:
                 current_tilemap = tilemap3
             elif self.current_level == 4:
                 current_tilemap = tilemap4
+            elif self.current_level == 5:
+                current_tilemap = tilemap5
                 for _ in range(50):
                     Snowflake(self)
 
@@ -395,7 +397,7 @@ class Game:
                     if column == "C" and force_map not in ['store', 'boss_arena']: EnemyCoin(self, j, i)
                     if column == "P" and create_player: self.player = Player(self, j, i)
                     if column == "Q": Plant(self, j, i)
-                    if column == "O" and force_map not in ['store', 'boss_arena'] and self.current_level != 2: Obstacle(self, j, i)
+                    if column == "O" and force_map not in ['store', 'boss_arena'] and self.current_level != 2 and 5: Obstacle(self, j, i)
                     if column == "S": SlimeNPC(self, j, i)
                     if column == "T": Portal(self, j, i)
                     if column == "M": Seller1NPC(self, j, i)
@@ -418,7 +420,7 @@ class Game:
         except Exception as e:
             print(f"Erro ao carregar música: {e}")
         self.playing = True
-        self.current_level = 1
+        self.current_level = 4 #Nível Start
         
         self.all_sprites = pygame.sprite.LayeredUpdates()
         self.arrows = pygame.sprite.LayeredUpdates()
