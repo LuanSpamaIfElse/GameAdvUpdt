@@ -65,7 +65,7 @@ class Player(pygame.sprite.Sprite):
         self.x_change = 0
         self.y_change = 0
         self.facing = 'down'
-        self.coins = 10
+        self.coins = 7
 
         #lentidão agua
         self.slow_modifier = 0.5  # Reduz a velocidade pela metade na água
@@ -501,7 +501,7 @@ class Snowflake(pygame.sprite.Sprite):
         self.rect.x = self.x
         self.rect.y = self.y
 
-        self.speed = random.randint(1, 3)
+        self.speed = random.randint(1, 5)
 
     def update(self):
         self.rect.y += self.speed
