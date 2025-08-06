@@ -61,7 +61,7 @@ class Game:
         self.boxe_spritesheet = Spritesheet('sprt/img/boxing_glove.png')
         self.watermelon_spritesheet = Spritesheet("sprt/img/watermelon.png")
         self.snowflakes_spritesheet = Spritesheet('sprt/img/snowflake_spr.png')
-        self.house_spritesheet = Spritesheet('sprt/img/house_spr.png')
+        self.house_spritesheet = Spritesheet('sprt/img/pixel-art-house.png')
         self.terrain_spritesheet = Spritesheet('sprt/terrain/terrain.png')
         self.obstacle_spritesheet = Spritesheet('sprt/terrain/TreesSpr.png')
         self.portal_spritsheet = Spritesheet('sprt/terrain/portalpurplespr.png')
@@ -79,7 +79,7 @@ class Game:
         
         self.ability_panel = AbilityPanel(self)
         self.current_level = 1
-        self.max_levels = 8
+        self.max_levels = 6
 
     # V-- MÉTODOS DE MULTIPLAYER ADICIONADOS AQUI --V
     def get_local_ip(self):
@@ -276,10 +276,27 @@ class Game:
             
     # O método intro_screen original foi substituído pelos novos menus, mas pode ser mantido se desejado.
 
-    def next_level(self):
-        player_life = self.player.life if hasattr(self, 'player') else 20
-        player_coins = self.player.coins if hasattr(self, 'player') else 0
+    # main.py
 
+    def next_level(self):
+        # Salva o estado completo do jogador antes de limpar os sprites
+        if hasattr(self, 'player'):
+            player_life = self.player.life
+            player_coins = self.player.coins
+            player_damage = self.player.damage
+            player_speed_boost = self.player.speed_boost
+            player_attack_cooldown_multiplier = self.player.attack_cooldown_multiplier
+            player_dodge_cooldown_multiplier = self.player.dodge_cooldown_multiplier
+        else:
+            # Valores de fallback
+            player_life = 20
+            player_coins = 0
+            player_damage = None
+            player_speed_boost = 0
+            player_attack_cooldown_multiplier = 1.0
+            player_dodge_cooldown_multiplier = 1.0
+
+        # Limpa todos os sprites e grupos relevantes
         self.all_sprites.empty()
         self.arrows.empty()
         self.blocks.empty()
@@ -291,37 +308,46 @@ class Game:
         self.bosses.empty()
         self.snowflakes.empty()
         self.fire_areas.empty()
-        # No modo multiplayer, os outros jogadores também precisam ser limpos e recriados
         self.other_players.clear()
 
+        music = None # Inicializa a variável de música
+
+        # --- LÓGICA REVISADA PARA TRANSIÇÃO DE NÍVEL ---
+        
+        # Verifica se estamos vindo da loja para um novo nível/chefe
         if getattr(self, 'loading_store', False):
             self.loading_store = False
-            self.current_level += 1
-            next_map = self.current_level
-            music = MUSIC_LEVELS.get(self.current_level, MUSIC_LEVELS.get(1))
-            create_player = True
+            self.current_level += 1  # Incrementa o nível (ex: 5 -> 6)
+
+            # Imediatamente verifica se o novo nível ultrapassa o máximo
+            if self.current_level > self.max_levels:
+                print("Todos os níveis normais completados! Preparando para o boss...")
+                self.load_boss_level()
+                return  # Encerra o método aqui, pois load_boss_level cuida do resto
+            else:
+                # Carrega o próximo nível normal
+                music = MUSIC_LEVELS.get(self.current_level, MUSIC_LEVELS.get(1))
+                self.createTilemap(create_player=True) # Usa self.current_level para carregar o mapa
         else:
+            # Se não, estamos indo de um nível para a loja
             self.loading_store = True
-            next_map = 'store'
             music = MUSIC_LEVELS.get('store')
-            create_player = True
+            self.createTilemap(create_player=True, force_map='store')
 
-        if self.current_level > self.max_levels:
-            print("Todos os níveis normais completados! Preparando para o boss...")
-            self.load_boss_level()
-            return
-
-        print(f"Loading map for: {next_map}")
-        self.createTilemap(create_player=create_player, force_map=next_map)
-
+        # Restaura os atributos do jogador (não será executado para o chefe devido ao 'return')
         if hasattr(self, 'player'):
             self.player.life = player_life
             self.player.coins = player_coins
-            # Reatribui o ID de rede ao jogador recriado
+            if player_damage is not None:
+                self.player.damage = player_damage
+            self.player.speed_boost = player_speed_boost
+            self.player.attack_cooldown_multiplier = player_attack_cooldown_multiplier
+            self.player.dodge_cooldown_multiplier = player_dodge_cooldown_multiplier
+
             if self.game_mode in ['host', 'client']:
                 self.player.id = self.player_id
 
-
+        # Carrega a música apropriada
         if music:
             try:
                 pygame.mixer.music.load(music)
@@ -331,6 +357,23 @@ class Game:
                 print(f"Erro ao carregar música: {e}")
 
     def load_boss_level(self):
+        # Salva o estado completo do jogador antes de limpar os sprites
+        if hasattr(self, 'player'):
+            player_life = self.player.life
+            player_coins = self.player.coins
+            player_damage = self.player.damage
+            player_speed_boost = self.player.speed_boost
+            player_attack_cooldown_multiplier = self.player.attack_cooldown_multiplier
+            player_dodge_cooldown_multiplier = self.player.dodge_cooldown_multiplier
+        else:
+            # Valores de fallback
+            player_life = 20
+            player_coins = 0
+            player_damage = None
+            player_speed_boost = 0
+            player_attack_cooldown_multiplier = 1.0
+            player_dodge_cooldown_multiplier = 1.0
+
         self.all_sprites.empty()
         self.arrows.empty()
         self.blocks.empty()
@@ -345,9 +388,16 @@ class Game:
 
         self.createTilemap(create_player=True, force_map='boss_arena')
         
+        # Restaura o estado completo do jogador após sua recriação
         if hasattr(self, 'player'):
-            self.player.life = self.player.life
-            self.player.coins = self.player.coins
+            self.player.life = player_life
+            self.player.coins = player_coins
+            if player_damage is not None:
+                self.player.damage = player_damage
+            self.player.speed_boost = player_speed_boost
+            self.player.attack_cooldown_multiplier = player_attack_cooldown_multiplier
+            self.player.dodge_cooldown_multiplier = player_dodge_cooldown_multiplier
+            
             if self.game_mode in ['host', 'client']:
                 self.player.id = self.player_id
 
@@ -373,10 +423,11 @@ class Game:
                 current_tilemap = tilemap3
             elif self.current_level == 4:
                 current_tilemap = tilemap4
-            elif self.current_level == 5:
-                current_tilemap = tilemap5
                 for _ in range(50):
                     Snowflake(self)
+            elif self.current_level == 5:
+                current_tilemap = tilemap5
+                
 
             temp_tilemap = [list(row) for row in current_tilemap]
             obstacle_positions = []
@@ -420,7 +471,7 @@ class Game:
         except Exception as e:
             print(f"Erro ao carregar música: {e}")
         self.playing = True
-        self.current_level = 4 #Nível Start
+        self.current_level = 5 #Nível Start
         
         self.all_sprites = pygame.sprite.LayeredUpdates()
         self.arrows = pygame.sprite.LayeredUpdates()
