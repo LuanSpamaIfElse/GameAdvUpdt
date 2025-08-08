@@ -320,7 +320,7 @@ class Game:
             self.current_level += 1  # Incrementa o nível (ex: 5 -> 6)
 
             # Imediatamente verifica se o novo nível ultrapassa o máximo
-            if self.current_level > self.max_levels:
+            if self.current_level >= self.max_levels:
                 print("Todos os níveis normais completados! Preparando para o boss...")
                 self.load_boss_level()
                 return  # Encerra o método aqui, pois load_boss_level cuida do resto
@@ -448,7 +448,9 @@ class Game:
                     if column == "C" and force_map not in ['store', 'boss_arena']: EnemyCoin(self, j, i)
                     if column == "P" and create_player: self.player = Player(self, j, i)
                     if column == "Q": Plant(self, j, i)
-                    if column == "O" and force_map not in ['store', 'boss_arena'] and self.current_level != 2 and 5: Obstacle(self, j, i)
+                    if column == "O" and force_map not in ['store', 'boss_arena'] and self.current_level not in (2, 5):
+                        Obstacle(self, j, i)
+
                     if column == "S": SlimeNPC(self, j, i)
                     if column == "T": Portal(self, j, i)
                     if column == "M": Seller1NPC(self, j, i)
