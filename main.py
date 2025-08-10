@@ -473,7 +473,7 @@ class Game:
         except Exception as e:
             print(f"Erro ao carregar música: {e}")
         self.playing = True
-        self.current_level = 5 #Nível Start
+        self.current_level = 1#Nível Start
         
         self.all_sprites = pygame.sprite.LayeredUpdates()
         self.arrows = pygame.sprite.LayeredUpdates()
