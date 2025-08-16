@@ -31,9 +31,9 @@ NERO_SPEED = 6
 #PLAYER_DAMAGE = 4
 
 
-NERO_WHIP_DAMAGE = 25 # Dano do chicote
+NERO_WHIP_DAMAGE = 2 # Dano do chicote
 NERO_FIRE_DAMAGE = 8 # Dano da área de fogo
-NERO_KNIFE_DAMAGE = 15 # Dano do ataque giratório
+NERO_KNIFE_DAMAGE = 3 # Dano do ataque giratório
 
 NERO_WHIP_RANGE = 250 # Distância para o ataque de chicote
 NERO_KNIFE_RANGE = 70 # Distância para o ataque de faca
@@ -54,7 +54,7 @@ CHAR_ARROW_SIZE = 50
 PLAYER1_ATTR = {
     "name": "Jack",
     "life": 18,
-    "damage": 4,
+    "damage": 14,
     "speed": 5,
     "sprite": "sprt/PLAYERS/player1tst.png",
     # MANTENHA OU ALTERE PARA A SPRITESHEET CORRETA DO ESPADACHIM
@@ -185,8 +185,8 @@ MUSIC_LEVELS = {
     1: 'audios/som_da_floresta (mp3).mp3',
     2: 'audios/ambiente1swamp.mp3',
     3: 'audios/Cave1song.mp3',
-    3: 'audios/WaterDrops-Cave.mp3',
     4: 'audios/vento-Snow.mp3',
+    5: 'audios/som_da_floresta (mp3).mp3',
     'store': 'audios/store-backsong.mp3'
 }
 #fases
@@ -311,24 +311,24 @@ tilemap4 = [
 ]
 tilemap5 = [
     'BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB',
-    'B...........................E..Q............................C..............B',
-    'BP.............................Q.E.........................................B',
-    'B...........................QQQQ...........................QQQQQQQQQQQQQQQQB',
-    'B.M.V.S........................Q........................G...Q............T.B',
-    'B...........................E..Q............................Q.E............B',
-    'B..............................Q............................QQQQQQQQQQQQQQQB',
-    'BWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW...WWWWWWWWWWWWWWWWWWWWWWWWWW.............B',
-    'B....................................C.....................................B',
-    'B..........................................................................B',
-    'B...QQQQQQQQQQQQQQ...................QQQQQQQQQQQQQQQQQQQ...WWWWWWWWWWWWWWWWWB',
-    'B...Q.E.......C..Q...................................E.Q...................B',
-    'B...Q............Q.....................................Q.....E.............B',
+    'B...........................E..Q............................C................B',
+    'BP.............................Q.E...........................................B',
+    'B...........................QQQQ...........................QQQQQQQQQQQQQ..QQQB',
+    'B.M.V.S........................Q........................G...Q............T...B',
+    'B...........................E..Q............................Q.E..............B',
+    'B..............................Q............................QQQQQQQQQQQQQQQ..B',
+    'BWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW...WWWWWWWWWWWWWWWWWWWWWWWWWW..............B',
+    'B....................................C.......................................B',
+    'B............................................................................B',
+    'B...QQQQQQQQQQQQQQ...................QQQQQQQQQQQQQQQQQQQ...WWWWWWWWWWWWWWWWW.B',
+    'B...Q.E.......C..Q...................................E.Q.....................B',
+    'B...Q............Q.H...................................Q.....E...............B',
     'B...Q..O...O.....Q...........................O....O......Q...................B',
-    'B...Q............Q.....................................Q................G..B',
+    'B...Q............Q.....................................Q................G....B',
     'B...Q.G.O........Q...E.....................C.............Q...................B',
-    'B...QQQQQQQQQQQQQQ...................QQQQQQQQQQQQQQQQQQQ...WWWWWWWWWWWWWWWWWB',
-    'B................E.........................................................B',
-    'B............C......................................Z.!!.................B',
+    'B...QQQQQQQQQQQQQQ...................QQQQQQQQQQQQQQQQQQQ...WWWWWWWWWWWWWWWWWWB',
+    'B................E.........................................................WWB',
+    'B............C......................................Z.!!.....................B',
     'BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB',
 ]
 store = [
@@ -340,9 +340,9 @@ store = [
 ]
 boss_arena = [
     'BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB',
-    'BQQP.Q......O.......................B',
+    'BQQP.Q......O...............H.......B',
     'B..QQ...........N...................B',
-    'B......C...C.................H......B',
+    'B......C...C........................B',
     'B..E................................B',
     'B.....C.........Q...Q...............B',
     'B...E......C........................B',
