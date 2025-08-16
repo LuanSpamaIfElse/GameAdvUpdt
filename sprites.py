@@ -115,6 +115,12 @@ class Player(pygame.sprite.Sprite):
         self.speed_boost = 0  # Bônus de velocidade
         self.attack_cooldown_multiplier = 1.0  # Multiplicador de cooldown
         self.dodge_cooldown_multiplier = 1.0  # Multiplicador de cooldown
+        #sangramento
+        self.is_bleeding = False
+        self.bleeding_damage = 0
+        self.bleeding_duration = 0
+        self.bleeding_start_time = 0
+        self.last_bleeding_tick = 0
 
     def draw_health_bar(self, surface, offset=(0, 0)):
         bar_x = self.rect.x + offset[0] + (self.rect.width // 2) - (HEALTH_BAR_WIDTH // 2)
@@ -259,6 +265,14 @@ class Player(pygame.sprite.Sprite):
     def update(self):
         # Apenas o jogador local deve processar o movimento baseado em input
         is_local_player = (self.id == self.game.player_id)
+        self.update_bleeding_effect()
+        if self.is_bleeding and self.life > 0:
+            if random.random() < 0.3: # Chance de criar uma partícula a cada frame
+                offset_x = random.randint(-self.rect.width // 4, self.rect.width // 4)
+                offset_y = random.randint(0, self.rect.height // 2)
+                particle_x = self.rect.centerx + offset_x
+                particle_y = self.rect.bottom - offset_y
+                Particle(self.game, particle_x, particle_y)
         self.update_shield()
         self.update_special_arrows()
         
@@ -389,10 +403,16 @@ class Player(pygame.sprite.Sprite):
         if all_hits and not self.invulnerable:
             self.take_damage() # Aplica dano e invulnerabilidade
 
-            # --- Lógica de Knockback ---
-            knockback_strength = 15 # Força do empurrão em pixels
             enemy_hit = all_hits[0] # Pega o primeiro inimigo da colisão para o cálculo
 
+            # --- NOVO: Verifica se o inimigo é um morcego para aplicar sangramento ---
+            if isinstance(enemy_hit, Bat):
+                self.apply_bleeding()
+            # ----------------------------------------------------------------------
+
+            # --- Lógica de Knockback ---
+            knockback_strength = 15 # Força do empurrão em pixels
+            
             # Calcula o vetor do inimigo para o jogador
             dx = self.rect.centerx - enemy_hit.rect.centerx
             dy = self.rect.centery - enemy_hit.rect.centery
@@ -482,7 +502,38 @@ class Player(pygame.sprite.Sprite):
             Shield(self.game, self)  # <-- ADICIONE ESTA LINHA para criar o sprite do escudo
             return True
         return False
+    def apply_bleeding(self):
+        #"""Ativa o efeito de sangramento no jogador se ele ainda não estiver ativo."""
+        if not self.is_bleeding:
+            self.is_bleeding = True
+            # Define um dano aleatório de 1, 2 ou 3 por segundo
+            self.bleeding_damage = random.choice([1, 2])
+            # Define uma duração aleatória entre 6 e 9 segundos (em milissegundos)
+            self.bleeding_duration = random.randint(3000, 5000)
+            
+            current_time = pygame.time.get_ticks()
+            self.bleeding_start_time = current_time
+            self.last_bleeding_tick = current_time # Inicia o contador para o primeiro dano
 
+    def update_bleeding_effect(self):
+        #"""Verifica e aplica o dano de sangramento ao longo do tempo."""
+        if not self.is_bleeding:
+            return
+
+        current_time = pygame.time.get_ticks()
+
+        # Verifica se a duração do sangramento acabou
+        if current_time - self.bleeding_start_time > self.bleeding_duration:
+            self.is_bleeding = False # Encerra o efeito
+            return
+
+        # Aplica o dano a cada 1 segundo (1000 ms)
+        if current_time - self.last_bleeding_tick > 1000:
+            self.life -= self.bleeding_damage
+            self.last_bleeding_tick = current_time
+            # Opcional: Adicione um feedback visual ou sonoro aqui
+            if self.life <= 0:
+                self.kill()
 #GROUNDS
 class Snowflake(pygame.sprite.Sprite):
     def __init__(self, game):
@@ -1820,6 +1871,7 @@ class SwordAttack(pygame.sprite.Sprite):
         hits_bats = pygame.sprite.spritecollide(self, self.game.bats, False)
         hits_bosses = pygame.sprite.spritecollide(self, self.game.bosses, False)
 
+        damage = 0 # Define um valor padrão
         if self.game.player.char_type == 'swordsman':
             damage = PLAYER1_ATTR["damage"]
 
@@ -2044,8 +2096,12 @@ class Boxing(pygame.sprite.Sprite):
         hits_bats = pygame.sprite.spritecollide(self, self.game.bats, False)
         hits_bosses = pygame.sprite.spritecollide(self, self.game.bosses, False)
 
+        damage = 0 # Define um valor padrão
         if self.game.player.char_type == 'boxer':
-            damage = PLAYER3_ATTR["damage"]  # Dano alto para o boxeador
+            damage = PLAYER3_ATTR["damage"]
+
+        for enemy in hits_enemies:
+            enemy.take_damage(damage, self.direction)
 
         for enemy in hits_enemies:
             enemy.take_damage(damage, self.direction)
@@ -2573,6 +2629,32 @@ class Coin(pygame.sprite.Sprite):
             self.current_frame = (self.current_frame + 1) % len(self.animation_frames)
             self.image = self.animation_frames[self.current_frame]
             self.image.set_colorkey(BLACK)
+
+class Particle(pygame.sprite.Sprite):
+    def __init__(self, game, x, y):
+        self.groups = game.all_sprites, game.particles
+        pygame.sprite.Sprite.__init__(self, self.groups)
+        self.game = game
+        self.image = pygame.Surface((3, 3)) # Tamanho da partícula
+        self.image.fill((255, 0, 0)) # Cor vermelha
+        self.rect = self.image.get_rect(center=(x, y))
+        self.x = float(self.rect.x)
+        self.y = float(self.rect.y)
+        self.direction = random.uniform(0, 2 * math.pi) # Direção aleatória
+        self.speed = random.uniform(1, 3) # Velocidade aleatória
+        self.gravity = 0.1
+        self.y_velocity = -self.speed / 2 # Inicialmente para cima
+        self.lifetime = random.randint(300, 800) # Tempo de vida em milissegundos
+        self.creation_time = pygame.time.get_ticks()
+
+    def update(self):
+        self.x += math.cos(self.direction) * self.speed
+        self.y += math.sin(self.direction) * self.speed + self.y_velocity
+        self.y_velocity += self.gravity
+        self.rect.x = int(self.x)
+        self.rect.y = int(self.y)
+        if pygame.time.get_ticks() - self.creation_time > self.lifetime:
+            self.kill()
 
             #melancias (Evangelion)
 class Watermelon(pygame.sprite.Sprite):
