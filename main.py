@@ -53,6 +53,7 @@ class Game:
         self.fire_areas = pygame.sprite.LayeredUpdates()
         self.house = pygame.sprite.LayeredUpdates()
         self.watermelon = pygame.sprite.LayeredUpdates()
+        self.particles = pygame.sprite.LayeredUpdates() # <-- LINHA ADICIONADA
         
         self.shield_spritesheet = Spritesheet('sprt/img/shield.png')
         self.arrowsSpecial_spritesheet = Spritesheet('sprt/img/arrowSpecial_spr.png')
@@ -309,6 +310,7 @@ class Game:
         self.snowflakes.empty()
         self.fire_areas.empty()
         self.other_players.clear()
+        self.particles.empty() # Limpa as partículas da tela anterior
 
         music = None # Inicializa a variável de música
 
@@ -385,6 +387,7 @@ class Game:
         self.bosses.empty()
         self.fire_areas.empty()
         self.other_players.clear()
+        self.particles.empty()
 
         self.createTilemap(create_player=True, force_map='boss_arena')
         
@@ -484,6 +487,7 @@ class Game:
         self.npcs = pygame.sprite.LayeredUpdates()
         self.bosses = pygame.sprite.LayeredUpdates()
         self.fire_areas = pygame.sprite.LayeredUpdates()
+        self.particles = pygame.sprite.LayeredUpdates()
         
         self.createTilemap(create_player=True)
 
