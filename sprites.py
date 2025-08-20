@@ -1883,7 +1883,8 @@ class SwordAttack(pygame.sprite.Sprite):
 
         for boss in hits_bosses:
             boss.take_damage(damage, self.direction)
-
+        for melon in hits watermelon:
+                melon.take_damage(damage)
     def update(self):
         self.animate()
         self.collide()
@@ -2663,21 +2664,31 @@ class Watermelon(pygame.sprite.Sprite):
         self._layer = BLOCK_LAYER
         self.groups = self.game.all_sprites, self.game.blocks
         pygame.sprite.Sprite.__init__(self, self.groups)
-
         # Posição do bloco
         self.x = x * TILESIZES
         self.y = y * TILESIZES
         self.width = TILESIZES
         self.height = TILESIZES
-
         # Define a aparência do bloco
         self.image = self.game.watermelon_spritesheet.get_sprite(0, 0, self.width, self.height)
-
         # Define o retângulo de colisão
         self.rect = self.image.get_rect()
         self.rect.x = self.x
         self.rect.y = self.y
-
+        # --- NOVO: Atributos de vida para a melancia ---
+        self.life = WATERMELON_LIFE
+        self.max_life = WATERMELON_LIFE
+        # --- FIM NOVO ---
+    # --- NOVO: Método para a melancia receber dano ---
+    def take_damage(self, amount):
+        self.life -= amount
+        if self.life <= 0:
+            self.kill()
+            # Dropa uma moeda quando a melancia é destruída
+            Coin(self.game, self.rect.centerx, self.rect.centery)
+    # --- NOVO: Desenha a barra de vida da melancia ---
+    def draw_health_bar(self, surface, offset=(0, 0)):
+        if self.life == self.max_life: return # Não desenha a barra se a vida estiver cheia
 class Water_Watermelon(pygame.sprite.Sprite):
     def __init__(self, game, x, y):
         self.game = game
