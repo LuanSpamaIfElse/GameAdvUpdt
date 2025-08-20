@@ -53,7 +53,8 @@ class Game:
         self.fire_areas = pygame.sprite.LayeredUpdates()
         self.house = pygame.sprite.LayeredUpdates()
         self.watermelon = pygame.sprite.LayeredUpdates()
-        self.particles = pygame.sprite.LayeredUpdates() # <-- LINHA ADICIONADA
+        self.particles = pygame.sprite.LayeredUpdates() 
+        self.player_attacks = pygame.sprite.LayeredUpdates()
         
         self.shield_spritesheet = Spritesheet('sprt/img/shield.png')
         self.arrowsSpecial_spritesheet = Spritesheet('sprt/img/arrowSpecial_spr.png')
@@ -488,6 +489,7 @@ class Game:
         self.bosses = pygame.sprite.LayeredUpdates()
         self.fire_areas = pygame.sprite.LayeredUpdates()
         self.particles = pygame.sprite.LayeredUpdates()
+        self.watermelon = pygame.sprite.LayeredUpdates()
         
         self.createTilemap(create_player=True)
 
@@ -689,7 +691,7 @@ class Game:
         for p_sprite in self.other_players.values():
             if p_sprite.alive():
                 p_sprite.draw_health_bar(self.screen)
-        
+        for melon in self.watermelon: melon.draw_health_bar(self.screen)
         for enemy in self.enemies: enemy.draw_health_bar(self.screen)
         for bats in self.bats: bats.draw_health_bar(self.screen)
         for boss in self.bosses: boss.draw_health_bar()
