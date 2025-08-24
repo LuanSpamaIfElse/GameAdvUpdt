@@ -1870,6 +1870,7 @@ class SwordAttack(pygame.sprite.Sprite):
         hits_enemies = pygame.sprite.spritecollide(self, self.game.enemies, False)
         hits_bats = pygame.sprite.spritecollide(self, self.game.bats, False)
         hits_bosses = pygame.sprite.spritecollide(self, self.game.bosses, False)
+        hits_watermelon = pygame.sprite.spritecollide(self, self.game.watermelon, False)
 
         damage = 0 # Define um valor padrão
         if self.game.player.char_type == 'swordsman':
@@ -1883,8 +1884,9 @@ class SwordAttack(pygame.sprite.Sprite):
 
         for boss in hits_bosses:
             boss.take_damage(damage, self.direction)
-        for melon in hits watermelon:
-                melon.take_damage(damage)
+
+        for melon in hits_watermelon:
+            melon.take_damage(damage)
     def update(self):
         self.animate()
         self.collide()
@@ -2049,6 +2051,7 @@ class Arrow(pygame.sprite.Sprite):
         hits_enemies = pygame.sprite.spritecollide(self, self.game.enemies, False)
         hits_bats = pygame.sprite.spritecollide(self, self.game.bats, False)
         hits_bosses = pygame.sprite.spritecollide(self, self.game.bosses, False)
+        hits_watermelon = pygame.sprite.spritecollide(self, self.game.watermelon, False)
         
         # Damage enemies and disappear
         for enemy in hits_enemies:
@@ -2062,6 +2065,10 @@ class Arrow(pygame.sprite.Sprite):
         for boss in hits_bosses:
             boss.take_damage(self.damage, self.direction)
             self.kill()
+
+        for melon in hits_watermelon:
+            melon.take_damage(self.damage)
+            self.kill() 
 
     def fall(self):
         """Change state to fallen and switch to fallen sprite"""
@@ -2096,6 +2103,8 @@ class Boxing(pygame.sprite.Sprite):
         hits_enemies = pygame.sprite.spritecollide(self, self.game.enemies, False)
         hits_bats = pygame.sprite.spritecollide(self, self.game.bats, False)
         hits_bosses = pygame.sprite.spritecollide(self, self.game.bosses, False)
+        hits_watermelon = pygame.sprite.spritecollide(self, self.game.watermelon, False)
+        
 
         damage = 0 # Define um valor padrão
         if self.game.player.char_type == 'boxer':
@@ -2112,6 +2121,9 @@ class Boxing(pygame.sprite.Sprite):
 
         for boss in hits_bosses:
             boss.take_damage(damage, self.direction)
+        
+        for melon in hits_watermelon:
+            melon.take_damage(damage)
 
     def update(self):
         self.animate()
@@ -2662,7 +2674,7 @@ class Watermelon(pygame.sprite.Sprite):
     def __init__(self, game, x, y):
         self.game = game
         self._layer = BLOCK_LAYER
-        self.groups = self.game.all_sprites, self.game.blocks
+        self.groups = self.game.all_sprites, self.game.blocks, self.game.watermelon
         pygame.sprite.Sprite.__init__(self, self.groups)
         # Posição do bloco
         self.x = x * TILESIZES
