@@ -567,23 +567,26 @@ class Ground1(pygame.sprite.Sprite):
         self.groups = game.all_sprites
         pygame.sprite.Sprite.__init__(self, self.groups)
 
-        # Posição do tile
         self.x = x * TILESIZES
         self.y = y * TILESIZES
         self.width = TILESIZES
         self.height = TILESIZES
         
-        # Diferentes sprites para cada tilemap
-        self.tilemap_sprites = {
-            1: game.terrain_spritesheet.get_sprite(0, 352, self.width, self.height),
-            2: game.terrain_spritesheet.get_sprite(256, 352, self.width+6, self.height),
-            3: game.terrain_spritesheet.get_sprite(925, 703, self.width+6, self.height),
-            4: game.terrain_spritesheet.get_sprite(576, 544, self.width+4, self.height),
-            5: game.terrain_spritesheet.get_sprite(0, 352, self.width, self.height)
-        }
+        #
         
-        # Carrega o sprite baseado no nível atual
-        self.update_sprite()
+        if self.game.is_in_house:
+            # Se está na casa, usa o sprite de madeira.
+            self.image = self.game.house_interior_spritesheet.get_sprite(0, 0, self.width, self.height)
+        else:
+            # Se está fora, cria o dicionário e escolhe o sprite do nível.
+            self.tilemap_sprites = {
+                1: game.terrain_spritesheet.get_sprite(0, 352, self.width, self.height),
+                2: game.terrain_spritesheet.get_sprite(256, 352, self.width+6, self.height),
+                3: game.terrain_spritesheet.get_sprite(925, 703, self.width+6, self.height),
+                4: game.terrain_spritesheet.get_sprite(576, 544, self.width+4, self.height),
+                5: game.terrain_spritesheet.get_sprite(0, 352, self.width, self.height)
+            }
+            self.image = self.tilemap_sprites.get(self.game.current_level, self.tilemap_sprites[1])
         
         # Define o retângulo de colisão
         self.rect = self.image.get_rect()
@@ -591,13 +594,15 @@ class Ground1(pygame.sprite.Sprite):
         self.rect.y = self.y
     
     def update_sprite(self):
-        """Atualiza o sprite baseado no nível atual"""
-        self.image = self.tilemap_sprites.get(self.game.current_level, 
-                                            self.tilemap_sprites[1])  # Default para tilemap1
+        #"Atualiza o sprite baseado no nível atual"""
+        if not self.game.is_in_house:  # Só atualiza se não estiver na casa
+            self.image = self.tilemap_sprites.get(self.game.current_level, 
+                                                self.tilemap_sprites[1])
     
     def update(self):
-        """Atualiza o sprite se o nível mudar"""
-        self.update_sprite()
+        #""Atualiza o sprite se o nível mudar"""
+        if not self.game.is_in_house:  # Só atualiza se não estiver na casa
+            self.update_sprite()
 
 class Water1(pygame.sprite.Sprite):
     def __init__(self, game, x, y):
@@ -739,11 +744,14 @@ class Portal(pygame.sprite.Sprite):
         if self.active and hasattr(self.game, 'player') and not self.activated:
             if pygame.sprite.collide_rect(self, self.game.player):
                 self.activated = True
-                # Chama next_level diretamente após um pequeno delay
-                pygame.time.delay(300)  # Pequeno delay para efeito visual
-                self.game.next_level()
-                return True
-        return False  # Dispara evento após 300ms
+                pygame.time.delay(300)
+            
+                if self.game.is_in_house:
+                    self.game.exit_house()
+                else:
+                    self.game.next_level()
+                # --- FIM MODIFICAÇÃO ---
+                return
 
     def animate(self):
         self.animation_counter += 1
@@ -1406,35 +1414,34 @@ class House(pygame.sprite.Sprite):
         self.groups = self.game.all_sprites, self.game.blocks
         pygame.sprite.Sprite.__init__(self, self.groups)
 
-        # Posição do bloco
         self.x = x * TILESIZES
         self.y = y * TILESIZES
-        self.width = TILESIZES
-        self.height = TILESIZES
-
-        # Define a aparência do bloco
-        self.animation_frames = {
-            'idle' : [
-                self.game.house_spritesheet.get_sprite(55, 38, 150, 190),
-                self.game.house_spritesheet.get_sprite( 55, 290, 150, 150)
-            ]
-        }
         
-        self.current_frame = 0
-        self.animation_speed = 30
-        self.animation_counter = 0
-        self.image = self.animation_frames['idle'][self.current_frame]
+        # Carrega a imagem da casa (pode ser maior que um tile)
+        self.original_image = self.game.house_spritesheet.get_sprite(55, 38, 150, 190)
+        self.image = self.original_image
         
-        # Define o retângulo de colisão
         self.rect = self.image.get_rect()
         self.rect.x = self.x
         self.rect.y = self.y
-    def animate(self):
-        self.animation_counter += 1
-        if self.animation_counter >= self.animation_speed:
-            self.animation_counter = 0
-            self.current_frame = (self.current_frame + 1) % len(self.animation_frames['idle'])
-            self.image = self.animation_frames['idle'][self.current_frame]
+        
+        # --- NOVO: Define a área da porta para colisão ---
+        # As coordenadas são relativas à imagem da casa (0,0 é o canto superior esquerdo da imagem)
+        # (x=70, y=160) com largura 15 e altura 10
+        self.door_area = pygame.Rect(70, 160, 225, 225)
+        # Cria um rect global para a porta para facilitar a checagem
+        self.door_rect_global = self.door_area.move(self.rect.topleft)
+        # --- FIM NOVO ---
+
+   
+    def update(self):
+        # Atualiza a posição da porta global se a casa se mover (devido à câmera)
+        self.door_rect_global.topleft = self.rect.move(self.door_area.topleft).topleft
+
+        # Verifica se o jogador existe e colide com a porta
+        if hasattr(self.game, 'player') and self.door_rect_global.colliderect(self.game.player.rect):
+            self.game.enter_house(self) 
+
 
 class AbilityPanel:
     def __init__(self, game):
