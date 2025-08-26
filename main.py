@@ -30,6 +30,11 @@ class Game:
         self.paused = False 
         self.font = pygame.font.SysFont('arial.ttf', 32)
         
+#interior casa
+        self.is_in_house = False
+        self.level_before_house = None
+        self.pos_before_house = None
+
         # Atributos do jogador (serão definidos na seleção)
         self.player_attrs = {}
         
@@ -54,8 +59,8 @@ class Game:
         self.house = pygame.sprite.LayeredUpdates()
         self.watermelon = pygame.sprite.LayeredUpdates()
         self.particles = pygame.sprite.LayeredUpdates() 
-        self.player_attacks = pygame.sprite.LayeredUpdates()
         
+        self.house_interior_spritesheet = Spritesheet('sprt/terrain/MadeiraTexture.png')
         self.shield_spritesheet = Spritesheet('sprt/img/shield.png')
         self.arrowsSpecial_spritesheet = Spritesheet('sprt/img/arrowSpecial_spr.png')
         self.arrows_spritesheet = Spritesheet('sprt/img/arrow_spr.png')
@@ -82,6 +87,73 @@ class Game:
         self.ability_panel = AbilityPanel(self)
         self.current_level = 1
         self.max_levels = 6
+
+    def save_player_state(self):
+        if not hasattr(self, 'player'): return {}
+        return {
+            "life": self.player.life,
+            "coins": self.player.coins,
+            "damage": self.player.damage,
+            "speed_boost": self.player.speed_boost,
+            "attack_cooldown_multiplier": self.player.attack_cooldown_multiplier,
+            "dodge_cooldown_multiplier": self.player.dodge_cooldown_multiplier,
+        }
+
+    def restore_player_state(self, state):
+        if not hasattr(self, 'player') or not state: return
+        self.player.life = state["life"]
+        self.player.coins = state["coins"]
+        self.player.damage = state["damage"]
+        self.player.speed_boost = state["speed_boost"]
+        self.player.attack_cooldown_multiplier = state["attack_cooldown_multiplier"]
+        self.player.dodge_cooldown_multiplier = state["dodge_cooldown_multiplier"]
+
+    # --- NOVO: Limpa todos os sprites ---
+    def clear_all_sprites(self):
+        self.all_sprites.empty()
+        self.arrows.empty()
+        self.blocks.empty()
+        self.bats.empty()
+        self.enemies.empty()
+        self.attacks.empty()
+        self.npcs.empty()
+        self.water.empty()
+        self.bosses.empty()
+        self.snowflakes.empty()
+        self.fire_areas.empty()
+        self.other_players.clear()
+        self.particles.empty()
+    
+    # --- NOVO: Método para entrar na casa ---
+    def enter_house(self, house_sprite):
+        print("Entrando na casa...")
+        player_state = self.save_player_state()
+
+        self.level_before_house = self.current_level
+        # Posição de retorno, um pouco abaixo da casa
+        self.pos_before_house = (house_sprite.rect.x // TILESIZES, (house_sprite.rect.y // TILESIZES) + 4)
+        
+        self.clear_all_sprites()
+        self.is_in_house = True
+        
+        self.createTilemap(create_player=True, force_map='house_interior')
+        self.restore_player_state(player_state)
+
+    # --- NOVO: Método para sair da casa ---
+    def exit_house(self):
+        print("Saindo da casa...")
+        player_state = self.save_player_state()
+
+        self.clear_all_sprites()
+        self.is_in_house = False
+        self.current_level = self.level_before_house
+
+        # Cria o mapa sem o jogador
+        self.createTilemap(create_player=False)
+        # Cria o jogador na posição salva
+        self.player = Player(self, self.pos_before_house[0], self.pos_before_house[1])
+        
+        self.restore_player_state(player_state)
 
     # V-- MÉTODOS DE MULTIPLAYER ADICIONADOS AQUI --V
     def get_local_ip(self):
@@ -417,6 +489,8 @@ class Game:
         try:
             if force_map == 'store':
                 current_tilemap = store
+            elif force_map == 'house_interior':
+                current_tilemap = house_interior_map
             elif force_map == 'boss_arena':
                 current_tilemap = boss_arena
             elif self.current_level == 1:
@@ -436,7 +510,7 @@ class Game:
             temp_tilemap = [list(row) for row in current_tilemap]
             obstacle_positions = []
             
-            if force_map not in ['store', 'boss_arena'] and self.current_level != 2:
+            if force_map not in ['store', 'boss_arena', 'house_interior'] and self.current_level != 2:
                 while len(obstacle_positions) < OBSTACLE_COUNT:
                     x = random.randint(0, len(temp_tilemap[0]) - 1)
                     y = random.randint(0, len(temp_tilemap) - 1)
@@ -489,7 +563,6 @@ class Game:
         self.bosses = pygame.sprite.LayeredUpdates()
         self.fire_areas = pygame.sprite.LayeredUpdates()
         self.particles = pygame.sprite.LayeredUpdates()
-        self.watermelon = pygame.sprite.LayeredUpdates()
         
         self.createTilemap(create_player=True)
 
@@ -691,7 +764,7 @@ class Game:
         for p_sprite in self.other_players.values():
             if p_sprite.alive():
                 p_sprite.draw_health_bar(self.screen)
-        for melon in self.watermelon: melon.draw_health_bar(self.screen)
+        
         for enemy in self.enemies: enemy.draw_health_bar(self.screen)
         for bats in self.bats: bats.draw_health_bar(self.screen)
         for boss in self.bosses: boss.draw_health_bar()
