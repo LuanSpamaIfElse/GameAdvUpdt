@@ -55,8 +55,8 @@ CHAR_ARROW_SIZE = 50
 
 PLAYER1_ATTR = {
     "name": "Jack",
-    "life": 18,
-    "damage": 12,
+    "life": 16,
+    "damage": 7,
     "speed": 5,
     "sprite": "sprt/PLAYERS/player1tst.png",
     # MANTENHA OU ALTERE PARA A SPRITESHEET CORRETA DO ESPADACHIM
@@ -68,7 +68,7 @@ PLAYER1_ATTR = {
 PLAYER2_ATTR = {
     "name": "Emma",
     "life": 18,
-    "damage": 10,
+    "damage": 7,
     "speed": 5,
     "sprite": "sprt/PLAYERS/player2tst.png",
     # ALTERADO para a spritesheet do arqueiro
@@ -80,7 +80,7 @@ PLAYER2_ATTR = {
 PLAYER3_ATTR = {
     "name": "Harald",
     "life": 25,
-    "damage": 13,
+    "damage": 11,
     "speed": 3,
     "sprite": "sprt/PLAYERS/player3tst.png",
     # ALTERADO para a spritesheet do boxeador
@@ -350,4 +350,20 @@ boss_arena = [
     'B...E......C........................B',
     'B...E......C........................B',
     'BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB'
+]
+
+# config.py
+
+# (final do arquivo, junto com os outros tilemaps)
+
+house_interior_map = [
+    'BBBBBBBBBB',
+    'B......Z.B',
+    'BZ...C.ZZB',
+    'B........B',
+    'B........B',
+    'B...P....B',
+    'BZ.......B',
+    'B....T...B',
+    'BBBBBBBBBB'
 ]
