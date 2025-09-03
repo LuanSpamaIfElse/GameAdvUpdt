@@ -60,7 +60,7 @@ class Game:
         self.watermelon = pygame.sprite.LayeredUpdates()
         self.particles = pygame.sprite.LayeredUpdates() 
         
-        self.house_interior_spritesheet = Spritesheet('sprt/terrain/MadeiraTexture.png')
+        self.house_interior_spritesheet = Spritesheet('sprt/img/gameover.png')
         self.shield_spritesheet = Spritesheet('sprt/img/shield.png')
         self.arrowsSpecial_spritesheet = Spritesheet('sprt/img/arrowSpecial_spr.png')
         self.arrows_spritesheet = Spritesheet('sprt/img/arrow_spr.png')
@@ -203,7 +203,7 @@ class Game:
             self.clock.tick(FPS)
 
     def show_multiplayer_role_screen(self):
-        """Mostra a tela para escolher entre Host e Cliente."""
+        #Mostra a tela para escolher entre Host e Cliente."""
         title_font = pygame.font.SysFont('arial', 50, bold=True)
         info_font = pygame.font.SysFont('arial', 28)
         
@@ -722,6 +722,10 @@ class Game:
                 if not (shop_active and isinstance(sprite, Player)):
                     sprite.update()
 
+        # Verifica a colisão entre o player e a casa
+        if hasattr(self, 'player'):
+            self.player.collide_house()
+
         self.check_enemies_and_spawn_portal()
         
         for boss in self.bosses:
@@ -746,6 +750,9 @@ class Game:
             # para que as colisões relativas ao mapa continuem funcionando.
             self.player.x += camera_offset_x
             self.player.y += camera_offset_y
+            
+            # Os outros jogadores são atualizados com base nos dados de rede,
+            # então a câmera os moverá corretamente junto com o resto do cenário.
             
             # Os outros jogadores são atualizados com base nos dados de rede,
             # então a câmera os moverá corretamente junto com o resto do cenário.
