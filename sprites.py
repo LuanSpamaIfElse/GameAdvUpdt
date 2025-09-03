@@ -443,6 +443,17 @@ class Player(pygame.sprite.Sprite):
                     self.rect.bottom = block.rect.top
                 elif push_y < 0:  # Se foi empurrado para cima
                     self.rect.top = block.rect.bottom
+
+    def collide_house(self):
+        # Verifica a colisão entre o player e qualquer sprite no grupo da casa
+        hits = pygame.sprite.spritecollide(self, self.game.house, False)
+        if hits:
+            house_sprite = hits[0] # Pega o primeiro sprite da casa que colidiu
+            # Verifica se o player está colidindo com a parte de baixo do sprite da casa
+            if self.rect.bottom <= house_sprite.rect.bottom:
+                self.game.enter_house(house_sprite)
+
+
     def collide_blocks(self, direction):
     # Colisão apenas com blocos normais (não inclui água)
         hits = pygame.sprite.spritecollide(self, self.game.blocks, False)
@@ -1425,13 +1436,10 @@ class House(pygame.sprite.Sprite):
         self.rect.x = self.x
         self.rect.y = self.y
         
-        # --- NOVO: Define a área da porta para colisão ---
-        # As coordenadas são relativas à imagem da casa (0,0 é o canto superior esquerdo da imagem)
-        # (x=70, y=160) com largura 15 e altura 10
+        
         self.door_area = pygame.Rect(70, 160, 225, 225)
         # Cria um rect global para a porta para facilitar a checagem
         self.door_rect_global = self.door_area.move(self.rect.topleft)
-        # --- FIM NOVO ---
 
    
     def update(self):
