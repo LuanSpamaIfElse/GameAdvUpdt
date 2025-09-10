@@ -795,6 +795,8 @@ class Game:
         self.dialog_box.draw(self.screen)
         if self.paused:
             self.draw_pause_menu()
+        for house in self.house: # Itera sobre o grupo 'house'
+            house.draw()
         pygame.display.update()
 
     def main(self):
@@ -912,4 +914,4 @@ while g.running:
 
 
 pygame.quit()
-sys.exit()
+sys.exit()s
