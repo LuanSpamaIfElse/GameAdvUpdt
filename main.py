@@ -30,7 +30,12 @@ class Game:
         self.paused = False 
         self.font = pygame.font.SysFont('arial.ttf', 32)
         
-#interior casa
+        # --- NOVO: Controle de acesso e cooldown da casa ---
+        self.house_entered_this_level = False
+        self.last_house_interaction_time = 0
+        self.house_interaction_cooldown = 1000 # 1 segundo de cooldown
+
+        #interior casa
         self.is_in_house = False
         self.level_before_house = None
         self.pos_before_house = None
@@ -124,22 +129,26 @@ class Game:
         self.other_players.clear()
         self.particles.empty()
     
-    # --- NOVO: Método para entrar na casa ---
+    # --- MODIFICADO: Método para entrar na casa ---
     def enter_house(self, house_sprite):
-        print("Entrando na casa...")
+        
         player_state = self.save_player_state()
 
         self.level_before_house = self.current_level
         # Posição de retorno, um pouco abaixo da casa
-        self.pos_before_house = (house_sprite.rect.x // TILESIZES, (house_sprite.rect.y // TILESIZES) + 4)
+        self.pos_before_house = (house_sprite.rect.x // TILESIZES, (house_sprite.rect.y // TILESIZES) + 5) # Aumentado para +5
         
         self.clear_all_sprites()
         self.is_in_house = True
         
+        # --- NOVO: Atualiza o estado de acesso e o tempo de interação ---
+        self.house_entered_this_level = True
+        self.last_house_interaction_time = pygame.time.get_ticks()
+
         self.createTilemap(create_player=True, force_map='house_interior')
         self.restore_player_state(player_state)
 
-    # --- NOVO: Método para sair da casa ---
+    # --- MODIFICADO: Método para sair da casa ---
     def exit_house(self):
         print("Saindo da casa...")
         player_state = self.save_player_state()
@@ -147,6 +156,9 @@ class Game:
         self.clear_all_sprites()
         self.is_in_house = False
         self.current_level = self.level_before_house
+
+        # --- NOVO: Atualiza o tempo de interação ao sair ---
+        self.last_house_interaction_time = pygame.time.get_ticks()
 
         # Cria o mapa sem o jogador
         self.createTilemap(create_player=False)
@@ -352,7 +364,11 @@ class Game:
 
     # main.py
 
+    # --- MODIFICADO: next_level ---
     def next_level(self):
+        # --- NOVO: Reseta o estado de acesso da casa ao mudar de nível ---
+        self.house_entered_this_level = False
+
         # Salva o estado completo do jogador antes de limpar os sprites
         if hasattr(self, 'player'):
             player_life = self.player.life
@@ -371,19 +387,7 @@ class Game:
             player_dodge_cooldown_multiplier = 1.0
 
         # Limpa todos os sprites e grupos relevantes
-        self.all_sprites.empty()
-        self.arrows.empty()
-        self.blocks.empty()
-        self.bats.empty()
-        self.enemies.empty()
-        self.attacks.empty()
-        self.npcs.empty()
-        self.water.empty()
-        self.bosses.empty()
-        self.snowflakes.empty()
-        self.fire_areas.empty()
-        self.other_players.clear()
-        self.particles.empty() # Limpa as partículas da tela anterior
+        self.clear_all_sprites()
 
         music = None # Inicializa a variável de música
 
@@ -542,7 +546,11 @@ class Game:
         except Exception as e:
             print(f"Erro ao criar tilemap: {e}")
 
+    # --- MODIFICADO: new ---
     def new(self):
+        # --- NOVO: Reseta o estado de acesso da casa ao iniciar novo jogo ---
+        self.house_entered_this_level = False
+        
         pygame.mixer.init()
         try:
             pygame.mixer.music.load(MUSIC_LEVELS[1])
