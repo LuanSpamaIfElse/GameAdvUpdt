@@ -1437,7 +1437,7 @@ class House(pygame.sprite.Sprite):
     def __init__(self, game, x, y):
         self.game = game
         self._layer = BLOCK_LAYER
-        self.groups = self.game.all_sprites, self.game.blocks
+        self.groups = self.game.all_sprites, self.game.house
         pygame.sprite.Sprite.__init__(self, self.groups)
 
         self.x = x * TILESIZES
@@ -1452,11 +1452,15 @@ class House(pygame.sprite.Sprite):
         self.rect.y = self.y
         
         
-        self.door_area = pygame.Rect(70, 160, 225, 225)
+        self.door_area = pygame.Rect(65, 160, 10, 10)
         # Cria um rect global para a porta para facilitar a checagem
         self.door_rect_global = self.door_area.move(self.rect.topleft)
 
-   
+    def draw(self):
+        # Desenha a área de colisão da porta como um retângulo azul
+        # Use a cor AZUL definida em settings.py, ou defina uma aqui (ex: (0, 0, 255))
+        pygame.draw.rect(self.game.screen, (0, 0, 255), self.door_rect_global, 2)
+
     def update(self):
         # Atualiza a posição da porta global se a casa se mover (devido à câmera)
         self.door_rect_global.topleft = self.rect.move(self.door_area.topleft).topleft
