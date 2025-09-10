@@ -284,6 +284,7 @@ class Player(pygame.sprite.Sprite):
         
         if is_local_player:
             self.collide_enemy()
+            
             # Aplica o movimento
             self.rect.x += self.x_change
             self.collide_blocks('x')
@@ -292,7 +293,8 @@ class Player(pygame.sprite.Sprite):
             self.rect.y += self.y_change
             self.collide_blocks('y')
             self.y = self.rect.y
-
+            
+            self.collide_house()
         # Verifica se está na água e causa dano (1 por segundo)
         bottom_half_rect = pygame.Rect(
             self.rect.left,
@@ -444,15 +446,28 @@ class Player(pygame.sprite.Sprite):
                 elif push_y < 0:  # Se foi empurrado para cima
                     self.rect.top = block.rect.bottom
 
+    # --- MÉTODO collide_house MODIFICADO ---
     def collide_house(self):
-        # Verifica a colisão entre o player e qualquer sprite no grupo da casa
-        hits = pygame.sprite.spritecollide(self, self.game.house, False)
-        if hits:
-            house_sprite = hits[0] # Pega o primeiro sprite da casa que colidiu
-            # Verifica se o player está colidindo com a parte de baixo do sprite da casa
-            if self.rect.bottom <= house_sprite.rect.bottom:
-                self.game.enter_house(house_sprite)
+        # 1. Verifica se a casa já foi acessada neste nível
+        if self.game.house_entered_this_level:
+            return
 
+        # 2. Verifica o cooldown de interação
+        now = pygame.time.get_ticks()
+        if now - self.game.last_house_interaction_time < self.game.house_interaction_cooldown:
+            return
+
+        hits = pygame.sprite.spritecollide(self, self.game.house, False)
+        for house_sprite in hits:
+            # Atualiza a área global da porta baseada na posição atual da casa
+            door_rect_global = house_sprite.door_area.move(house_sprite.rect.topleft)
+            
+            # Verifica se o jogador está colidindo com a área da porta
+            if self.rect.colliderect(door_rect_global):
+                # Verifica se o jogador está vindo de baixo (aproximando-se da porta)
+                if self.rect.bottom > door_rect_global.top + 10:  # Margem de 10 pixels
+                    self.game.enter_house(house_sprite)
+                    break
 
     def collide_blocks(self, direction):
     # Colisão apenas com blocos normais (não inclui água)
