@@ -30,7 +30,7 @@ class Game:
         self.paused = False 
         self.font = pygame.font.SysFont('arial.ttf', 32)
         
-        # --- NOVO: Controle de acesso e cooldown da casa ---
+        # controle de acesso e cooldown da casa ---
         self.house_entered_this_level = False
         self.last_house_interaction_time = 0
         self.house_interaction_cooldown = 1000 # 1 segundo de cooldown
@@ -129,35 +129,36 @@ class Game:
         self.other_players.clear()
         self.particles.empty()
     
-    # --- MODIFICADO: Método para entrar na casa ---
+   # Método para entrar na casa ---
     def enter_house(self, house_sprite):
+        # Verifica se já entrou na casa neste nível
+        if self.house_entered_this_level:
+            return
         
         player_state = self.save_player_state()
 
         self.level_before_house = self.current_level
-        # Posição de retorno, um pouco abaixo da casa
-        self.pos_before_house = (house_sprite.rect.x // TILESIZES, (house_sprite.rect.y // TILESIZES) + 5) # Aumentado para +5
+        # --- Posição de retorno ajustada para ficar abaixo da porta ---
+        self.pos_before_house = (house_sprite.rect.x // TILESIZES, (house_sprite.rect.y // TILESIZES) + 5)
         
         self.clear_all_sprites()
         self.is_in_house = True
         
-        # --- NOVO: Atualiza o estado de acesso e o tempo de interação ---
+        # Marca que a casa foi acessada neste nível e atualiza o cooldown
         self.house_entered_this_level = True
         self.last_house_interaction_time = pygame.time.get_ticks()
 
         self.createTilemap(create_player=True, force_map='house_interior')
         self.restore_player_state(player_state)
 
-    # --- MODIFICADO: Método para sair da casa ---
     def exit_house(self):
-        print("Saindo da casa...")
         player_state = self.save_player_state()
 
         self.clear_all_sprites()
         self.is_in_house = False
         self.current_level = self.level_before_house
 
-        # --- NOVO: Atualiza o tempo de interação ao sair ---
+        # --- NOVO: Atualiza o tempo de interação ao sair para evitar re-entrada imediata ---
         self.last_house_interaction_time = pygame.time.get_ticks()
 
         # Cria o mapa sem o jogador
@@ -166,7 +167,6 @@ class Game:
         self.player = Player(self, self.pos_before_house[0], self.pos_before_house[1])
         
         self.restore_player_state(player_state)
-
     # V-- MÉTODOS DE MULTIPLAYER ADICIONADOS AQUI --V
     def get_local_ip(self):
         """Tenta encontrar o endereço IP local."""
@@ -730,9 +730,9 @@ class Game:
                 if not (shop_active and isinstance(sprite, Player)):
                     sprite.update()
 
-        # Verifica a colisão entre o player e a casa
-        if hasattr(self, 'player'):
-            self.player.collide_house()
+        # A chamada para self.player.collide_house() foi removida daqui.
+        # Ela já é executada dentro de Player.update(), que é chamado no loop acima.
+        # Manter a chamada aqui era redundante e poderia causar problemas.
 
         self.check_enemies_and_spawn_portal()
         
@@ -758,7 +758,6 @@ class Game:
             # para que as colisões relativas ao mapa continuem funcionando.
             self.player.x += camera_offset_x
             self.player.y += camera_offset_y
-            
             # Os outros jogadores são atualizados com base nos dados de rede,
             # então a câmera os moverá corretamente junto com o resto do cenário.
             
@@ -795,8 +794,8 @@ class Game:
         self.dialog_box.draw(self.screen)
         if self.paused:
             self.draw_pause_menu()
-        for house in self.house: # Itera sobre o grupo 'house'
-            house.draw()
+        # --- LINHA REMOVIDA DAQUI ---
+        # A chamada para house.draw() foi removida pois o método não existe mais
         pygame.display.update()
 
     def main(self):
@@ -914,4 +913,4 @@ while g.running:
 
 
 pygame.quit()
-sys.exit()s
+sys.exit()
