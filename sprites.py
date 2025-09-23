@@ -452,14 +452,14 @@ class Player(pygame.sprite.Sprite):
         if self.game.house_entered_this_level:
             return
 
-        # 2. Verifica o cooldown de interação
+        # 2. Verifica o cooldown de interação para evitar re-entradas acidentais
         now = pygame.time.get_ticks()
         if now - self.game.last_house_interaction_time < self.game.house_interaction_cooldown:
             return
 
         hits = pygame.sprite.spritecollide(self, self.game.house, False)
         for house_sprite in hits:
-            # Atualiza a área global da porta baseada na posição atual da casa
+            # A área da porta é definida em relação à imagem da casa (House)
             door_rect_global = house_sprite.door_area.move(house_sprite.rect.topleft)
             
             # Verifica se o jogador está colidindo com a área da porta
@@ -467,7 +467,7 @@ class Player(pygame.sprite.Sprite):
                 # Verifica se o jogador está vindo de baixo (aproximando-se da porta)
                 if self.rect.bottom > door_rect_global.top + 10:  # Margem de 10 pixels
                     self.game.enter_house(house_sprite)
-                    break
+                    break 
 
     def collide_blocks(self, direction):
     # Colisão apenas com blocos normais (não inclui água)
@@ -1451,23 +1451,15 @@ class House(pygame.sprite.Sprite):
         self.rect.x = self.x
         self.rect.y = self.y
         
-        
+        # Define a área da porta em relação à imagem da casa
         self.door_area = pygame.Rect(65, 160, 10, 10)
-        # Cria um rect global para a porta para facilitar a checagem
-        self.door_rect_global = self.door_area.move(self.rect.topleft)
 
-    def draw(self):
-        # Desenha a área de colisão da porta como um retângulo azul
-        # Use a cor AZUL definida em settings.py, ou defina uma aqui (ex: (0, 0, 255))
-        pygame.draw.rect(self.game.screen, (0, 0, 255), self.door_rect_global, 2)
+    # O método draw() foi completamente REMOVIDO para tirar o retângulo azul.
 
     def update(self):
-        # Atualiza a posição da porta global se a casa se mover (devido à câmera)
-        self.door_rect_global.topleft = self.rect.move(self.door_area.topleft).topleft
-
-        # Verifica se o jogador existe e colide com a porta
-        if hasattr(self.game, 'player') and self.door_rect_global.colliderect(self.game.player.rect):
-            self.game.enter_house(self) 
+        # O método update da casa não precisa mais verificar a colisão,
+        # pois isso agora é responsabilidade do método collide_house do Player.
+        pass
 
 
 class AbilityPanel:
