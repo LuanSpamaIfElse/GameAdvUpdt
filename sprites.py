@@ -1659,8 +1659,8 @@ class Nero(pygame.sprite.Sprite):
 
         self.x = x * TILESIZES
         self.y = y * TILESIZES
-        self.width = TILESIZES * 2
-        self.height = TILESIZES * 2
+        self.width = 60
+        self.height = 55 
 
         self.life = NERO_LIFE
         self.max_life = NERO_LIFE
@@ -1673,37 +1673,69 @@ class Nero(pygame.sprite.Sprite):
 
         self.attack_cooldown = 2000
         self.last_attack_time = pygame.time.get_ticks()
-        
-        # CORRIGIDO: Adiciona sistema de invulnerabilidade
+
         self.invulnerable = False
         self.invulnerable_time = 0
         self.invulnerability_duration = 250 # 0.25 segundos
 
-        # Placeholder da imagem
-        self.image = pygame.Surface([self.width, self.height])
-        self.image.fill(RED)
+        # --- INÍCIO DA MODIFICAÇÃO ---
+
+        # Carrega os frames da animação a partir da spritesheet
+        self.animation_frames = [
+            self.game.bossnero.get_sprite(197, 18, self.width, self.height),
+            self.game.bossnero.get_sprite(258, 20, self.width, self.height)
+        ]
+        
+        # Variáveis de controle da animação
+        self.current_frame = 0
+        self.animation_speed = 45 # Aumente para uma animação mais lenta, diminua para mais rápida
+        self.animation_counter = 0
+
+        # Define a imagem inicial e o rect (substituindo o quadrado vermelho)
+        self.image = self.animation_frames[self.current_frame]
         self.rect = self.image.get_rect()
+        
+        # --- FIM DA MODIFICAÇÃO ---
+        
         self.rect.x = self.x
         self.rect.y = self.y
 
         self.attacking = False
         self.attack_type = None
 
+    # --- NOVO MÉTODO ADICIONADO ---
+    def animate(self):
+        """Alterna entre os frames da animação do boss."""
+        self.animation_counter += 1
+        if self.animation_counter >= self.animation_speed:
+            self.animation_counter = 0
+            # Salva o centro do rect para evitar que o sprite "pule"
+            old_center = self.rect.center
+            # Avança para o próximo frame
+            self.current_frame = (self.current_frame + 1) % len(self.animation_frames)
+            # Atualiza a imagem
+            self.image = self.animation_frames[self.current_frame]
+            # Recria o rect com a nova imagem e restaura o centro
+            self.rect = self.image.get_rect()
+            self.rect.center = old_center
+
     def update(self):
         now = pygame.time.get_ticks()
         
-        # CORRIGIDO: Lógica de invulnerabilidade
+        # --- INÍCIO DA MODIFICAÇÃO ---
+        # Chama o método de animação a cada frame
+        self.animate()
+        # --- FIM DA MODIFICAÇÃO ---
+
         if self.invulnerable and now - self.invulnerable_time > self.invulnerability_duration:
             self.invulnerable = False
 
         self.movement()
         self.check_player_distance_and_attack()
         self.check_for_minion_spawn()
-        # Aplica movimento e checa colisão
         self.rect.y += self.y_change
-        self.collide_blocks('y') # CORRIGIDO: Checa colisão com paredes
+        self.collide_blocks('y')
         
-        # Atualiza áreas de fogo
         for fire_area in self.game.fire_areas:
             fire_area.update()
 
