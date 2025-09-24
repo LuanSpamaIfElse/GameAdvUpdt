@@ -79,6 +79,7 @@ class Game:
         self.portal_spritsheet = Spritesheet('sprt/terrain/portalpurplespr.png')
         self.enemy_spritesheet = Spritesheet('sprt/img/enemy.png')
         self.enemycoin_spritesheet = Spritesheet('sprt/img/enemy.png')
+        self.bossnero = Spritesheet('sprt/npc/neroboss.png')
         self.bats_spritesheet = Spritesheet('sprt/npc/bat.png')
         self.coin = Spritesheet('sprt/img/coin_spr.png')
         self.attack_spritsheet = Spritesheet('sprt/guts-spr-full_noise1_scale.png')
