@@ -50,7 +50,14 @@ CHAR_SELECT_FONT_SIZE = 36
 CHAR_DESC_FONT_SIZE = 22
 CHAR_ARROW_SIZE = 50
 # Personagens
-
+ARCHERTP_LIFE = 50
+ARCHERTP_DAMAGE = 8
+ARCHERTP_SPEED = 2 # Velocidade de movimento, embora ele se teleporte
+ARCHERTP_TELEPORT_COOLDOWN = 4000 # 4 segundos em milissegundos
+ARCHERTP_TELEPORT_RANGE = 400 # Raio de teleporte em pixels
+ARCHERTP_ANIMATION_SPEED = 12
+ARCHERTP_ATTACK_COOLDOWN = 1500 # 1.5 segundos
+ARCHERTP_PROJECTILE_SPEED = 8
 # Atributos dos personagens
 
 PLAYER1_ATTR = {
@@ -199,7 +206,7 @@ tilemap = [
     'B....S...O.......................................B',
     'BOQQOOOOO........................................B',
     'B..Q....C........................................B',
-    'B................................................B',
+    'B..................A.............................B',
     'BQ.........................Q.....................B',
     'B.QQ...............Q.............................B',
     'BQ..............E................................B',
