@@ -2779,3 +2779,205 @@ class Water_Watermelon(pygame.sprite.Sprite):
         self.rect = self.image.get_rect()
         self.rect.x = self.x
         self.rect.y = self.y
+
+class ArcherTP(pygame.sprite.Sprite):
+    def __init__(self, game, x, y):
+        self.game = game
+        self._layer = ENEMY_LAYER
+        self.groups = self.game.all_sprites, self.game.enemies
+        pygame.sprite.Sprite.__init__(self, self.groups)
+
+        self.x = x * TILESIZES
+        self.y = y * TILESIZES
+        self.width = 30
+        self.height = 38
+        self.life = ARCHERTP_LIFE
+        self.max_life = ARCHERTP_LIFE # Certifique-se de que esta linha está presente
+        self.damage = ARCHERTP_DAMAGE
+        self.teleport_cooldown = ARCHERTP_TELEPORT_COOLDOWN
+        self.last_teleport_time = pygame.time.get_ticks() # AQUI ESTÁ A CORREÇÃO
+        self.teleport_range = ARCHERTP_TELEPORT_RANGE
+        self.facing_right = True
+
+        self.animation_speed = ARCHERTP_ANIMATION_SPEED
+        self.animation_counter = 0
+        self.current_frame = 0
+        self.state = 'idle' # idle, crouching, shooting
+
+        self.last_attack_time = pygame.time.get_ticks() # E aqui também, para garantir
+        self.attack_cooldown = ARCHERTP_ATTACK_COOLDOWN
+        self.is_attacking = False
+        self.attack_start_time = 0
+
+        self.load_animations()
+        self.image = self.animation_frames['idle'][0]
+        self.image.set_colorkey(BLACK)
+        self.rect = self.image.get_rect()
+        self.rect.x = self.x
+        self.rect.y = self.y
+
+    def take_damage(self, amount):
+        self.life -= amount
+        if self.life <= 0:
+            self.kill()
+            # Dropa uma moeda
+            Coin(self.game, self.rect.centerx, self.rect.centery)
+            
+    # --- NOVO: Desenha a barra de vida da melancia ---
+    def draw_health_bar(self, surface):
+        if self.life == self.max_life:
+            return  # Não desenha a barra se a vida estiver cheia
+
+        # Dimensões da barra de vida
+        bar_width = self.rect.width
+        bar_height = 5
+        fill_width = (self.life / self.max_life) * bar_width
+        
+        # Posição da barra de vida (acima do inimigo)
+        bar_x = self.rect.x
+        bar_y = self.rect.y - 10
+
+        outline_rect = pygame.Rect(bar_x, bar_y, bar_width, bar_height)
+        fill_rect = pygame.Rect(bar_x, bar_y, fill_width, bar_height)
+
+        pygame.draw.rect(surface, RED, outline_rect)
+        pygame.draw.rect(surface, GREEN, fill_rect)
+
+
+    def load_animations(self):
+        self.animation_frames = {
+            'idle': [
+                self.game.archertp_spritesheet.get_sprite(405, 79, 30, 38)
+            ],
+            'crouching': [
+                self.game.archertp_spritesheet.get_sprite(147, 85, 31, 32)
+            ],
+            'shooting': [
+                self.game.archertp_spritesheet.get_sprite(21, 272, 30, 37)
+            ]
+        }
+        
+    def animate(self):
+        self.animation_counter += 1
+        
+        if self.animation_counter >= self.animation_speed:
+            self.animation_counter = 0
+            
+            if self.is_attacking:
+                # Usa a animação de atirar uma vez
+                frames = self.animation_frames['shooting']
+                if self.current_frame < len(frames):
+                    self.image = frames[self.current_frame]
+                    self.current_frame += 1
+                else:
+                    self.is_attacking = False
+                    self.current_frame = 0
+            else:
+                # Alterna entre idle e crouching
+                if self.state == 'idle':
+                    self.image = self.animation_frames['idle'][0]
+                elif self.state == 'crouching':
+                    self.image = self.animation_frames['crouching'][0]
+
+        # Inverte a imagem se necessário
+        if not self.facing_right:
+            self.image = pygame.transform.flip(self.image, True, False)
+
+        self.image.set_colorkey(BLACK)
+        old_center = self.rect.center
+        self.rect = self.image.get_rect()
+        self.rect.center = old_center
+
+    def teleport(self):
+        player_x, player_y = self.game.player.rect.center
+        
+        # Encontra uma nova posição aleatória perto do jogador
+        for _ in range(50): # Tenta 50 vezes para evitar loop infinito
+            angle = random.uniform(0, 2 * math.pi)
+            distance = random.uniform(TILESIZES * 2, self.teleport_range)
+            
+            new_x = player_x + distance * math.cos(angle)
+            new_y = player_y + distance * math.sin(angle)
+            
+            new_rect = pygame.Rect(new_x, new_y, self.rect.width, self.rect.height)
+            
+            # Verifica se a nova posição é válida (sem colisão com blocos ou obstáculos)
+            if not pygame.sprite.spritecollide(self, self.game.blocks, False) and \
+               not pygame.sprite.spritecollide(self, self.game.obstacle, False):
+                self.rect.centerx = new_x
+                self.rect.centery = new_y
+                self.last_teleport_time = pygame.time.get_ticks()
+                self.state = 'crouching'
+                self.current_frame = 0
+                return
+
+    def shoot(self):
+        now = pygame.time.get_ticks()
+        if now - self.last_attack_time >= self.attack_cooldown:
+            self.is_attacking = True
+            self.attack_start_time = now
+            self.last_attack_time = now
+            
+            # Cria a flecha
+            dx = self.game.player.rect.centerx - self.rect.centerx
+            dy = self.game.player.rect.centery - self.rect.centery
+            angle = math.atan2(dy, dx)
+            MobArrow(self.game, self.rect.centerx, self.rect.centery, angle, self.damage)
+            
+            self.current_frame = 0 # Reinicia a animação de ataque
+
+    def update(self):
+        # A habilidade de teleporte
+        now = pygame.time.get_ticks()
+        if now - self.last_teleport_time >= self.teleport_cooldown:
+            self.teleport()
+            self.shoot() # Atira após se teleportar
+            
+        # Altera para o estado "idle" se o ataque ou o agachamento tiverem terminado
+        if now - self.last_teleport_time > 1000 and self.state == 'crouching':
+            self.state = 'idle'
+        
+        # Determina a direção para inverter a imagem
+        if self.game.player.rect.centerx < self.rect.centerx:
+            self.facing_right = False
+        else:
+            self.facing_right = True
+
+        self.animate()
+        
+        # Colisão com o player (para causar dano)
+        if self.rect.colliderect(self.game.player.rect):
+            self.game.player.take_damage(self.damage)
+        
+        if self.life <= 0:
+            self.kill()
+
+class MobArrow(pygame.sprite.Sprite):
+    def __init__(self, game, x, y, angle, damage):
+        self.game = game
+        self._layer = ITEM_LAYER
+        self.groups = self.game.all_sprites, self.game.attacks
+        pygame.sprite.Sprite.__init__(self, self.groups)
+
+        self.damage = damage
+        self.image = pygame.transform.rotate(self.game.arrows_spritesheet.get_sprite(1, 1, 32, 32), math.degrees(-angle))
+        self.image.set_colorkey(BLACK)
+        self.rect = self.image.get_rect()
+        self.rect.center = (x, y)
+        
+        self.speed_x = ARCHERTP_PROJECTILE_SPEED * math.cos(angle)
+        self.speed_y = ARCHERTP_PROJECTILE_SPEED * math.sin(angle)
+
+    def update(self):
+        self.rect.x += self.speed_x
+        self.rect.y += self.speed_y
+        
+        # Remove a flecha se sair da tela ou colidir
+        if not self.game.screen.get_rect().colliderect(self.rect):
+            self.kill()
+        
+        hits_player = pygame.sprite.spritecollide(self, self.game.all_sprites, False, pygame.sprite.collide_mask)
+        for sprite in hits_player:
+            if isinstance(sprite, Player):
+                sprite.take_damage(self.damage)
+                self.kill()
