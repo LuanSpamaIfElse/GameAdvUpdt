@@ -64,6 +64,8 @@ class Game:
         self.house = pygame.sprite.LayeredUpdates()
         self.watermelon = pygame.sprite.LayeredUpdates()
         self.particles = pygame.sprite.LayeredUpdates() 
+        self.teleport_mobs = pygame.sprite.LayeredUpdates()
+        self.obstacle = pygame.sprite.LayeredUpdates()
         
         self.house_interior_spritesheet = Spritesheet('sprt/img/gameover.png')
         self.shield_spritesheet = Spritesheet('sprt/img/shield.png')
@@ -79,7 +81,8 @@ class Game:
         self.portal_spritsheet = Spritesheet('sprt/terrain/portalpurplespr.png')
         self.enemy_spritesheet = Spritesheet('sprt/img/enemy.png')
         self.enemycoin_spritesheet = Spritesheet('sprt/img/enemy.png')
-        self.bossnero = Spritesheet('sprt/npc/neroboss.png')
+        self.archertp_spritesheet = Spritesheet('sprt/npc/archertpSPR.png')
+        self.bossnero = Spritesheet('sprt/npc/mm-crawl.png')
         self.bats_spritesheet = Spritesheet('sprt/npc/bat.png')
         self.coin = Spritesheet('sprt/img/coin_spr.png')
         self.attack_spritsheet = Spritesheet('sprt/guts-spr-full_noise1_scale.png')
@@ -514,7 +517,8 @@ class Game:
 
             temp_tilemap = [list(row) for row in current_tilemap]
             obstacle_positions = []
-            
+            self.teleport_mobs.empty()
+            self.obstacle.empty() 
             if force_map not in ['store', 'boss_arena', 'house_interior'] and self.current_level != 2:
                 while len(obstacle_positions) < OBSTACLE_COUNT:
                     x = random.randint(0, len(temp_tilemap[0]) - 1)
@@ -535,6 +539,7 @@ class Game:
                         Obstacle(self, j, i)
 
                     if column == "S": SlimeNPC(self, j, i)
+                    if column == "A": ArcherTP(self, j, i)
                     if column == "T": Portal(self, j, i)
                     if column == "M": Seller1NPC(self, j, i)
                     if column == "V": Seller2NPC(self, j, i)
