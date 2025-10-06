@@ -2810,13 +2810,22 @@ class ArcherTP(pygame.sprite.Sprite):
         self.attack_start_time = 0
 
         self.load_animations()
+        # cache de frames flipados para evitar flip em tempo de execução
+        self.flipped_animation_frames = {}
+        for k, frames in self.animation_frames.items():
+            self.flipped_animation_frames[k] = [pygame.transform.flip(f, True, False) for f in frames]
+
         self.image = self.animation_frames['idle'][0]
         self.image.set_colorkey(BLACK)
         self.rect = self.image.get_rect()
         self.rect.x = self.x
         self.rect.y = self.y
 
-    def take_damage(self, amount):
+        # controle suave de flip: não troque de lado se estiver muito perto do player
+        self.facing_threshold = 20  # pixels - ajuste se quiser mais/menos sensível
+        self.facing_right = True
+
+    def take_damage(self, amount, direction=None):
         self.life -= amount
         if self.life <= 0:
             self.kill()
@@ -2875,13 +2884,33 @@ class ArcherTP(pygame.sprite.Sprite):
             else:
                 # Alterna entre idle e crouching
                 if self.state == 'idle':
-                    self.image = self.animation_frames['idle'][0]
+                    frames = self.animation_frames['idle']
+                    self.image = frames[0]
                 elif self.state == 'crouching':
-                    self.image = self.animation_frames['crouching'][0]
+                    frames = self.animation_frames['crouching']
+                    self.image = frames[0]
 
         # Inverte a imagem se necessário
-        if not self.facing_right:
-            self.image = pygame.transform.flip(self.image, True, False)
+        if self.is_attacking:
+            frames = self.animation_frames['shooting']
+        else:
+            frames = self.animation_frames.get(self.state, self.animation_frames['idle'])
+
+        # escolher frame atual (igual sua lógica atual)
+        frame = frames[self.current_frame % len(frames)]
+
+        # use a versão flipada se necessário
+        if self.facing_right:
+            self.image = frame
+        else:
+            # pega da cache
+            flipped = self.flipped_animation_frames.get(self.state)
+            if flipped:
+                # proteger índice caso estados tenham diferentes comprimentos:
+                idx = self.current_frame % len(flipped)
+                self.image = flipped[idx]
+            else:
+                self.image = pygame.transform.flip(frame, True, False)
 
         self.image.set_colorkey(BLACK)
         old_center = self.rect.center
@@ -2922,9 +2951,17 @@ class ArcherTP(pygame.sprite.Sprite):
             dx = self.game.player.rect.centerx - self.rect.centerx
             dy = self.game.player.rect.centery - self.rect.centery
             angle = math.atan2(dy, dx)
-            MobArrow(self.game, self.rect.centerx, self.rect.centery, angle, self.damage)
-            
-            self.current_frame = 0 # Reinicia a animação de ataque
+
+            # quantize para direção cardinal igual ao Arrow do player
+            if abs(dx) > abs(dy):
+                direction = 'right' if dx > 0 else 'left'
+            else:
+                direction = 'down' if dy > 0 else 'up'
+
+            MobArrow(self.game, self.rect.centerx, self.rect.centery, angle, self.damage, direction=direction)
+            # atualize facing também no momento do tiro (garante que ele olhe pro player quando atira)
+            if abs(dx) > self.facing_threshold:
+                self.facing_right = (dx > 0) # Reinicia a animação de ataque
 
     def update(self):
         # A habilidade de teleporte
@@ -2938,10 +2975,10 @@ class ArcherTP(pygame.sprite.Sprite):
             self.state = 'idle'
         
         # Determina a direção para inverter a imagem
-        if self.game.player.rect.centerx < self.rect.centerx:
-            self.facing_right = False
-        else:
-            self.facing_right = True
+        dx = (self.game.player.rect.centerx - self.rect.centerx)
+        if abs(dx) > self.facing_threshold:
+    # se dx > 0 -> player tá à direita do Archer -> Archer vira para a direita
+            self.facing_right = (dx > 0)
 
         self.animate()
         
@@ -2953,31 +2990,48 @@ class ArcherTP(pygame.sprite.Sprite):
             self.kill()
 
 class MobArrow(pygame.sprite.Sprite):
-    def __init__(self, game, x, y, angle, damage):
+    def __init__(self, game, x, y, angle, damage, direction=None):
         self.game = game
         self._layer = ITEM_LAYER
         self.groups = self.game.all_sprites, self.game.attacks
         pygame.sprite.Sprite.__init__(self, self.groups)
 
         self.damage = damage
-        self.image = pygame.transform.rotate(self.game.arrows_spritesheet.get_sprite(1, 1, 32, 32), math.degrees(-angle))
-        self.image.set_colorkey(BLACK)
-        self.rect = self.image.get_rect()
-        self.rect.center = (x, y)
-        
+        self.angle = angle
         self.speed_x = ARCHERTP_PROJECTILE_SPEED * math.cos(angle)
         self.speed_y = ARCHERTP_PROJECTILE_SPEED * math.sin(angle)
 
-    def update(self):
-        self.rect.x += self.speed_x
-        self.rect.y += self.speed_y
-        
-        # Remove a flecha se sair da tela ou colidir
-        if not self.game.screen.get_rect().colliderect(self.rect):
-            self.kill()
-        
-        hits_player = pygame.sprite.spritecollide(self, self.game.all_sprites, False, pygame.sprite.collide_mask)
-        for sprite in hits_player:
-            if isinstance(sprite, Player):
-                sprite.take_damage(self.damage)
-                self.kill()
+        # Determine direction (se não for passado, calcula a partir do angle)
+        if direction is None:
+            # quantize angle para cardinal
+            dx = math.cos(angle)
+            dy = math.sin(angle)
+            if abs(dx) > abs(dy):
+                direction = 'right' if dx > 0 else 'left'
+            else:
+                direction = 'down' if dy > 0 else 'up'
+        self.direction = direction
+
+        # Escolhe sprite com base na direção, seguindo o mesmo padrão do Arrow do player
+        # e levando em conta flechas especiais (se quiser)
+        # Verifica se as flechas do jogador estavam especiais (opcional)
+        # Aqui tratamos como padrão não-especial; se quiser especial, passe um flag.
+        self.flying_sprites = {
+            'up': self.game.arrows_spritesheet.get_sprite(13, 25, 10, 16),
+            'down': self.game.arrows_spritesheet.get_sprite(22, 26, 10, 16),
+            'left': self.game.arrows_spritesheet.get_sprite(25, 0, 14, 10),
+            'right': self.game.arrows_spritesheet.get_sprite(5, 0, 14, 9)
+        }
+        self.fallen_sprite = self.game.arrows_spritesheet.get_sprite(33, 26, 10, 16)
+
+        # Set initial image based on direction
+        self.image = self.flying_sprites[self.direction]
+        self.image.set_colorkey(BLACK)
+        self.rect = self.image.get_rect(center=(x, y))
+
+        # Timing variables (se já existirem na sua classe, preserve)
+        self.lifetime = 900
+        self.fallen_lifetime = 3000
+        self.spawn_time = pygame.time.get_ticks()
+        self.state = 'flying'
+        self.fall_time = 0
