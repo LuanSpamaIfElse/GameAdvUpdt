@@ -2918,27 +2918,73 @@ class ArcherTP(pygame.sprite.Sprite):
         self.rect.center = old_center
 
     def teleport(self):
+        if not hasattr(self.game, 'player'):
+            return
+            
         player_x, player_y = self.game.player.rect.center
         
-        # Encontra uma nova posição aleatória perto do jogador
-        for _ in range(50): # Tenta 50 vezes para evitar loop infinito
+        # Encontra uma nova posição válida perto do jogador
+        for attempt in range(50):  # Tenta no máximo 50 vezes
+            # Ângulo aleatório em relação ao jogador
             angle = random.uniform(0, 2 * math.pi)
-            distance = random.uniform(TILESIZES * 2, self.teleport_range)
+            distance = random.uniform(TILESIZES * 3, self.teleport_range)
             
             new_x = player_x + distance * math.cos(angle)
             new_y = player_y + distance * math.sin(angle)
             
-            new_rect = pygame.Rect(new_x, new_y, self.rect.width, self.rect.height)
+            # Cria um rect temporário para verificar colisões
+            temp_rect = pygame.Rect(new_x - self.rect.width//2, 
+                                new_y - self.rect.height//2, 
+                                self.rect.width, self.rect.height)
             
-            # Verifica se a nova posição é válida (sem colisão com blocos ou obstáculos)
-            if not pygame.sprite.spritecollide(self, self.game.blocks, False) and \
-               not pygame.sprite.spritecollide(self, self.game.obstacle, False):
-                self.rect.centerx = new_x
-                self.rect.centery = new_y
-                self.last_teleport_time = pygame.time.get_ticks()
-                self.state = 'crouching'
-                self.current_frame = 0
-                return
+            # Verifica se está dentro dos limites da tela
+            if (temp_rect.left < 0 or temp_rect.right > WIN_WIDTH or
+                temp_rect.top < 0 or temp_rect.bottom > WIN_HEIGHT):
+                continue  # Fora da tela, tenta outra posição
+            
+            # Verifica colisão com blocos
+            block_collision = False
+            for block in self.game.blocks:
+                if temp_rect.colliderect(block.rect):
+                    block_collision = True
+                    break
+            if block_collision:
+                continue
+                
+            # Verifica colisão com obstáculos
+            obstacle_collision = False
+            for obstacle in self.game.obstacle:
+                if temp_rect.colliderect(obstacle.rect):
+                    obstacle_collision = True
+                    break
+            if obstacle_collision:
+                continue
+                
+            # Verifica colisão com água
+            water_collision = False
+            for water in self.game.water:
+                if temp_rect.colliderect(water.rect):
+                    water_collision = True
+                    break
+            if water_collision:
+                continue
+                
+            # Verifica colisão com outros inimigos (opcional)
+            enemy_collision = False
+            for enemy in self.game.enemies:
+                if enemy != self and temp_rect.colliderect(enemy.rect):
+                    enemy_collision = True
+                    break
+            if enemy_collision:
+                continue
+                
+            # Se passou em todas as verificações, teleporta
+            self.rect.centerx = new_x
+            self.rect.centery = new_y
+            self.last_teleport_time = pygame.time.get_ticks()
+            self.state = 'crouching'
+            self.current_frame = 0
+            return
 
     def shoot(self):
         now = pygame.time.get_ticks()
@@ -2947,48 +2993,68 @@ class ArcherTP(pygame.sprite.Sprite):
             self.attack_start_time = now
             self.last_attack_time = now
             
-            # Cria a flecha
-            dx = self.game.player.rect.centerx - self.rect.centerx
-            dy = self.game.player.rect.centery - self.rect.centery
-            angle = math.atan2(dy, dx)
-
-            # quantize para direção cardinal igual ao Arrow do player
-            if abs(dx) > abs(dy):
-                direction = 'right' if dx > 0 else 'left'
-            else:
-                direction = 'down' if dy > 0 else 'up'
-
-            MobArrow(self.game, self.rect.centerx, self.rect.centery, angle, self.damage, direction=direction)
-            # atualize facing também no momento do tiro (garante que ele olhe pro player quando atira)
-            if abs(dx) > self.facing_threshold:
-                self.facing_right = (dx > 0) # Reinicia a animação de ataque
+            # Calcula direção para o jogador
+            if hasattr(self.game, 'player'):
+                dx = self.game.player.rect.centerx - self.rect.centerx
+                dy = self.game.player.rect.centery - self.rect.centery
+                angle = math.atan2(dy, dx)
+                
+                # Determina direção cardinal para animação
+                if abs(dx) > abs(dy):
+                    direction = 'right' if dx > 0 else 'left'
+                else:
+                    direction = 'down' if dy > 0 else 'up'
+                
+                # Cria a flecha
+                MobArrow(self.game, self.rect.centerx, self.rect.centery, angle, self.damage, direction)
+                
+                # Atualiza direção do sprite
+                if abs(dx) > self.facing_threshold:
+                    self.facing_right = (dx > 0)
 
     def update(self):
-        # A habilidade de teleporte
+    # Verifica se o jogador existe
+        if not hasattr(self.game, 'player') or not self.game.player.alive():
+            return
+            
         now = pygame.time.get_ticks()
+        
+        # Teleporte
         if now - self.last_teleport_time >= self.teleport_cooldown:
             self.teleport()
-            self.shoot() # Atira após se teleportar
+        
+        # Ataque (dispara independente do teleporte)
+        if now - self.last_attack_time >= self.attack_cooldown:
+            self.shoot()
             
-        # Altera para o estado "idle" se o ataque ou o agachamento tiverem terminado
+        # Transição de estados
         if now - self.last_teleport_time > 1000 and self.state == 'crouching':
             self.state = 'idle'
         
-        # Determina a direção para inverter a imagem
+        # Determina direção para olhar para o jogador
         dx = (self.game.player.rect.centerx - self.rect.centerx)
         if abs(dx) > self.facing_threshold:
-    # se dx > 0 -> player tá à direita do Archer -> Archer vira para a direita
             self.facing_right = (dx > 0)
 
         self.animate()
         
-        # Colisão com o player (para causar dano)
+        # Colisão com o jogador (dano por contato)
         if self.rect.colliderect(self.game.player.rect):
-            self.game.player.take_damage(self.damage)
+            self.game.player.take_damage(self.damage // 2)  # Dano reduzido por contato
         
         if self.life <= 0:
             self.kill()
-
+    def kill(self):
+    # Remove de todos os grupos
+        for group in self.groups:
+            group.remove(self)
+    
+    # Dropa uma moeda
+        Coin(self.game, self.rect.centerx, self.rect.centery)
+    
+    # Verifica se todos os inimigos foram derrotados
+        if len(self.game.enemies) == 0:
+            self.game.check_enemies_and_spawn_portal()
 class MobArrow(pygame.sprite.Sprite):
     def __init__(self, game, x, y, angle, damage, direction=None):
         self.game = game
@@ -3000,22 +3066,9 @@ class MobArrow(pygame.sprite.Sprite):
         self.angle = angle
         self.speed_x = ARCHERTP_PROJECTILE_SPEED * math.cos(angle)
         self.speed_y = ARCHERTP_PROJECTILE_SPEED * math.sin(angle)
-
-        # Determine direction (se não for passado, calcula a partir do angle)
-        if direction is None:
-            # quantize angle para cardinal
-            dx = math.cos(angle)
-            dy = math.sin(angle)
-            if abs(dx) > abs(dy):
-                direction = 'right' if dx > 0 else 'left'
-            else:
-                direction = 'down' if dy > 0 else 'up'
         self.direction = direction
 
-        # Escolhe sprite com base na direção, seguindo o mesmo padrão do Arrow do player
-        # e levando em conta flechas especiais (se quiser)
-        # Verifica se as flechas do jogador estavam especiais (opcional)
-        # Aqui tratamos como padrão não-especial; se quiser especial, passe um flag.
+        # Sprites da flecha
         self.flying_sprites = {
             'up': self.game.arrows_spritesheet.get_sprite(13, 25, 10, 16),
             'down': self.game.arrows_spritesheet.get_sprite(22, 26, 10, 16),
@@ -3024,14 +3077,55 @@ class MobArrow(pygame.sprite.Sprite):
         }
         self.fallen_sprite = self.game.arrows_spritesheet.get_sprite(33, 26, 10, 16)
 
-        # Set initial image based on direction
+        # Imagem inicial baseada na direção
         self.image = self.flying_sprites[self.direction]
         self.image.set_colorkey(BLACK)
         self.rect = self.image.get_rect(center=(x, y))
 
-        # Timing variables (se já existirem na sua classe, preserve)
-        self.lifetime = 900
-        self.fallen_lifetime = 3000
+        # Variáveis de tempo
+        self.lifetime = 2000  # 2 segundos
         self.spawn_time = pygame.time.get_ticks()
         self.state = 'flying'
-        self.fall_time = 0
+
+    def update(self):
+        # Verifica tempo de vida
+        if pygame.time.get_ticks() - self.spawn_time > self.lifetime:
+            self.kill()
+            return
+
+        if self.state == 'flying':
+            self.move()
+            self.check_collisions()
+
+    def move(self):
+        """Move a flecha baseado no ângulo"""
+        self.rect.x += self.speed_x
+        self.rect.y += self.speed_y
+
+        # Verifica se saiu dos limites do mapa
+        if (self.rect.right < 0 or self.rect.left > WIN_WIDTH or 
+            self.rect.bottom < 0 or self.rect.top > WIN_HEIGHT):
+            self.kill()
+
+    def check_collisions(self):
+        """Verifica colisões com blocos, jogador e outros objetos"""
+        # Colisão com blocos
+        if pygame.sprite.spritecollide(self, self.game.blocks, False):
+            self.kill()
+            return
+
+        # Colisão com obstáculos
+        if pygame.sprite.spritecollide(self, self.game.obstacle, False):
+            self.kill()
+            return
+
+        # Colisão com jogador
+        if hasattr(self.game, 'player') and self.rect.colliderect(self.game.player.rect):
+            self.game.player.take_damage(self.damage)
+            self.kill()
+            return
+
+        # Colisão com outras flechas (opcional)
+        if pygame.sprite.spritecollide(self, self.game.arrows, False):
+            self.kill()
+            return
