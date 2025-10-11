@@ -2984,6 +2984,22 @@ class ArcherTP(pygame.sprite.Sprite):
             self.last_teleport_time = pygame.time.get_ticks()
             self.state = 'crouching'
             self.current_frame = 0
+
+             # cria um "explodir" de partículas no ponto atual (antes de sumir)
+            for _ in range(20):
+                TeleportParticle(self.game, self.rect.centerx, self.rect.centery)
+
+            # realiza o teleporte (muda a posição)
+            self.rect.centerx = new_x
+            self.rect.centery = new_y
+            self.last_teleport_time = pygame.time.get_ticks()
+            self.state = 'crouching'
+            self.current_frame = 0
+
+            #partículas no ponto de chegada ----------
+            for _ in range(20):
+                TeleportParticle(self.game, int(new_x), int(new_y))
+
             return
 
     def shoot(self):
@@ -3129,3 +3145,32 @@ class MobArrow(pygame.sprite.Sprite):
         if pygame.sprite.spritecollide(self, self.game.arrows, False):
             self.kill()
             return
+
+class TeleportParticle(pygame.sprite.Sprite):
+    def __init__(self, game, x, y):
+        self.game = game
+        self._layer = PLAYER_LAYER + 1  # Fica acima do jogador
+        self.groups = self.game.all_sprites
+        pygame.sprite.Sprite.__init__(self, self.groups)
+
+        self.x = x
+        self.y = y
+        self.size = random.randint(4, 10)
+
+        # Cria uma partícula roxa com leve transparência
+        self.image = pygame.Surface((self.size, self.size), pygame.SRCALPHA)
+        self.image.fill((128, 0, 128, 180))  # Roxo com transparência
+        self.rect = self.image.get_rect(center=(self.x, self.y))
+
+        self.vel_x = random.uniform(-2, 2)
+        self.vel_y = random.uniform(-2, 2)
+        self.lifetime = random.randint(400, 800)  # em ms
+        self.spawn_time = pygame.time.get_ticks()
+
+    def update(self):
+        self.rect.x += self.vel_x
+        self.rect.y += self.vel_y
+
+        # Desaparece depois do tempo de vida
+        if pygame.time.get_ticks() - self.spawn_time > self.lifetime:
+            self.kill()
