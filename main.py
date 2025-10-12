@@ -400,7 +400,7 @@ class Game:
         # Verifica se estamos vindo da loja para um novo nível/chefe
         if getattr(self, 'loading_store', False):
             self.loading_store = False
-            self.current_level += 1  # Incrementa o nível (ex: 5 -> 6)
+            self.current_level += 1  # Incrementa o níved-> 6)
 
             # Imediatamente verifica se o novo nível ultrapassa o máximo
             if self.current_level >= self.max_levels:
@@ -753,6 +753,9 @@ class Game:
         if hasattr(self, 'player') and self.player.alive():
             camera_offset_x = WIN_WIDTH // 2 - self.player.rect.centerx
             camera_offset_y = WIN_HEIGHT // 2 - self.player.rect.centery
+
+        if hasattr(self, 'dialog_box'):
+            self.dialog_box.update()
             
             # Aplica o deslocamento da câmera a todos os sprites
             for sprite in self.all_sprites:
