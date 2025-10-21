@@ -391,6 +391,8 @@ class Player(pygame.sprite.Sprite):
     def kill(self):
         super().kill()
         self.game.playing = False
+        self.game.camera_offset_x = 0
+        self.game.camera_offset_y = 0
 
 
     def collide_enemy(self):
@@ -560,6 +562,10 @@ class Player(pygame.sprite.Sprite):
             # Opcional: Adicione um feedback visual ou sonoro aqui
             if self.life <= 0:
                 self.kill()
+
+    def perform_attack(self):
+        if hasattr(self.game, 'handle_player_attack'):
+            self.game.handle_player_attack()
 #GROUNDS
 class Snowflake(pygame.sprite.Sprite):
     def __init__(self, game):
@@ -2524,9 +2530,10 @@ class Seller2NPC(pygame.sprite.Sprite):
         
         self.upgrade_options = [
             {"name": "Restaurar Vida", "cost": 5, "description": "Recupera toda a sua vida.", "effect": self.upgrade_health},
-            {"name": "Aumentar Dano", "cost": 2, "description": "+2 de dano por ataque.", "effect": self.upgrade_damage},
+            {"name": "Aumentar Dano", "cost": 4, "description": "+2 de dano por ataque.", "effect": self.upgrade_damage},
             {"name": "Aumentar Velocidade", "cost": 2, "description": "Aumenta permanentemente a velocidade.", "effect": self.upgrade_speed},
-            {"name": "Melhorar Recarga", "cost": 3, "description": "-30% no tempo de recarga de habilidades.", "effect": self.upgrade_cooldown}
+            {"name": "Diminuir Recarga", "cost": 3, "description": "-30% no tempo de recarga de habilidades.", "effect": self.upgrade_cooldown},
+            {"name": "Comprar Pet de Fogo", "cost": PET_COST, "description": "Um companheiro que cria áreas de fogo.", "effect": self.buy_pet}  # NOVA OPÇÃO
         ]
 
     def load_animations(self):
@@ -2564,6 +2571,24 @@ class Seller2NPC(pygame.sprite.Sprite):
             return True
         return False
 
+    # NOVO MÉTODO: Comprar o Pet
+    def buy_pet(self, player):
+        if player.coins >= PET_COST and not self.game.player_has_pet:
+            player.coins -= PET_COST
+            self.game.player_has_pet = True
+            
+            # Cria o pet próximo ao jogador
+            if hasattr(self.game, 'player'):
+                Pet(self.game, player.rect.x, player.rect.y)
+            
+            return True
+        elif self.game.player_has_pet:
+            # Já possui um pet
+            return False
+        else:
+            # Moedas insuficientes
+            return False
+
     def draw_shop(self, surface):
         if not self.shop_active: return
             
@@ -2577,7 +2602,6 @@ class Seller2NPC(pygame.sprite.Sprite):
         
         surface.blit(title, title.get_rect(centerx=shop_rect.centerx, y=shop_rect.y + 20))
         
-        
         coin_font = pygame.font.SysFont('arial', SHOP_FONT_SIZE)
         coin_text = coin_font.render(f"Moedas: {self.game.player.coins}", True, UI_TITLE_COLOR)
         surface.blit(coin_text, coin_text.get_rect(right=shop_rect.right - 20, y=shop_rect.y + 65))
@@ -2585,13 +2609,21 @@ class Seller2NPC(pygame.sprite.Sprite):
         option_font = pygame.font.SysFont('arial', SHOP_FONT_SIZE)
         desc_font = pygame.font.SysFont('arial', 18)
         y_offset = 120
+        
         for i, option in enumerate(self.upgrade_options):
             if i == self.selected_option:
                 arrow_points = [(shop_rect.x + 25, shop_rect.y + y_offset + 10), (shop_rect.x + 40, shop_rect.y + y_offset + 17), (shop_rect.x + 25, shop_rect.y + y_offset + 24)]
                 pygame.draw.polygon(surface, SHOP_SELECTED_COLOR, arrow_points)
 
-            color = SHOP_SELECTED_COLOR if i == self.selected_option else SHOP_OPTION_COLOR
-            text = option_font.render(f"{option['name']} - ({option['cost']} moedas)", True, color)
+            # Verifica se é a opção do Pet e se o jogador já tem um
+            if option["name"] == "Comprar Pet de Fogo" and self.game.player_has_pet:
+                color = (150, 150, 150)  # Cinza para indicar indisponível
+                cost_text = "JÁ COMPRADO"
+            else:
+                color = SHOP_SELECTED_COLOR if i == self.selected_option else SHOP_OPTION_COLOR
+                cost_text = f"({option['cost']} moedas)"
+            
+            text = option_font.render(f"{option['name']} - {cost_text}", True, color)
             surface.blit(text, (shop_rect.x + 55, shop_rect.y + y_offset))
             
             desc = desc_font.render(option['description'], True, (200, 200, 200))
@@ -2614,7 +2646,14 @@ class Seller2NPC(pygame.sprite.Sprite):
         
         if keys[pygame.K_f] or (self.game.joystick and self.game.joystick.get_button(0)):
             selected = self.upgrade_options[self.selected_option]
-            selected["effect"](self.game.player)
+            
+            # Verifica se é a opção do Pet e se já foi comprado
+            if selected["name"] == "Comprar Pet de Fogo" and self.game.player_has_pet:
+                # Não faz nada se já tem o pet
+                pass
+            else:
+                selected["effect"](self.game.player)
+            
             self.last_interact_time = current_time
         
         if keys[pygame.K_ESCAPE] or (self.game.joystick and self.game.joystick.get_button(1)):
@@ -2918,89 +2957,152 @@ class ArcherTP(pygame.sprite.Sprite):
         self.rect.center = old_center
 
     def teleport(self):
-        if not hasattr(self.game, 'player'):
-            return
-            
-        player_x, player_y = self.game.player.rect.center
+        import math
+        from collections import deque
+
+        # Obtém o tilemap atual baseado no nível
+        if self.game.current_level == 1:
+            current_tilemap = tilemap
+        elif self.game.current_level == 2:
+            current_tilemap = tilemap2
+        elif self.game.current_level == 3:
+            current_tilemap = tilemap3
+        elif self.game.current_level == 4:
+            current_tilemap = tilemap4
+        elif self.game.current_level == 5:
+            current_tilemap = tilemap5
+        elif hasattr(self.game, 'is_in_house') and self.game.is_in_house:
+            current_tilemap = house_interior_map
+        else:
+            current_tilemap = tilemap  # fallback
+
+        tile_size = TILESIZES
+        map_w = len(current_tilemap[0])
+        map_h = len(current_tilemap)
+
+        def world_to_tile(px, py):
+            return int(px // tile_size), int(py // tile_size)
+
+        def tile_to_world(tx, ty):
+            return tx * tile_size + tile_size / 2, ty * tile_size + tile_size / 2
+
+        def in_map(tx, ty):
+            return 0 <= tx < map_w and 0 <= ty < map_h
+
+        def is_tile_allowed(tx, ty):
+            if not in_map(tx, ty):
+                return False
+            # Verifica se o tile é caminhável (não é bloco, água, etc.)
+            tile_char = current_tilemap[ty][tx]
+            return tile_char in ['.', 'P', 'E', 'C', 'G', 'S', 'A', 'T', 'M', 'V', 'N', '!', 'Z']
+
+        def clamp(value, a, b):
+            return max(a, min(b, value))
+
+        def clamp_to_map(px, py):
+            minx = tile_size / 2
+            miny = tile_size / 2
+            maxx = map_w * tile_size - tile_size / 2
+            maxy = map_h * tile_size - tile_size / 2
+            return clamp(px, minx, maxx), clamp(py, miny, maxy)
+
+        def line_is_clear(x0, y0, x1, y1, step=8):
+            dist = math.hypot(x1 - x0, y1 - y0)
+            steps = max(1, int(dist // step))
+            for i in range(1, steps + 1):
+                t = i / steps
+                sx = x0 + (x1 - x0) * t
+                sy = y0 + (y1 - y0) * t
+                tx, ty = world_to_tile(sx, sy)
+                if not is_tile_allowed(tx, ty):
+                    return False
+            return True
+
+        def find_nearest_allowed(target_px, target_py, max_radius_tiles=8):
+            start_tx, start_ty = world_to_tile(target_px, target_py)
+            visited = set()
+            q = deque()
+            q.append((start_tx, start_ty, 0))
+            visited.add((start_tx, start_ty))
+            while q:
+                tx, ty, d = q.popleft()
+                if in_map(tx, ty) and is_tile_allowed(tx, ty):
+                    return tile_to_world(tx, ty)
+                if d >= max_radius_tiles:
+                    continue
+                for dx, dy in ((1,0),(-1,0),(0,1),(0,-1)):
+                    nx, ny = tx + dx, ty + dy
+                    if (nx, ny) not in visited and in_map(nx, ny):
+                        visited.add((nx, ny))
+                        q.append((nx, ny, d + 1))
+            return None
+
+        # ---- Teleport real começa aqui ----
+        ox, oy = self.rect.center
         
-        # Encontra uma nova posição válida perto do jogador
-        for attempt in range(50):  # Tenta no máximo 50 vezes
-            # Ângulo aleatório em relação ao jogador
-            angle = random.uniform(0, 2 * math.pi)
-            distance = random.uniform(TILESIZES * 3, self.teleport_range)
-            
-            new_x = player_x + distance * math.cos(angle)
-            new_y = player_y + distance * math.sin(angle)
-            
-            # Cria um rect temporário para verificar colisões
-            temp_rect = pygame.Rect(new_x - self.rect.width//2, 
-                                new_y - self.rect.height//2, 
-                                self.rect.width, self.rect.height)
-            
-            # Verifica se está dentro dos limites da tela
-            if (temp_rect.left < 0 or temp_rect.right > WIN_WIDTH or
-                temp_rect.top < 0 or temp_rect.bottom > WIN_HEIGHT):
-                continue  # Fora da tela, tenta outra posição
-            
-            # Verifica colisão com blocos
-            block_collision = False
-            for block in self.game.blocks:
-                if temp_rect.colliderect(block.rect):
-                    block_collision = True
-                    break
-            if block_collision:
-                continue
-                
-            # Verifica colisão com obstáculos
-            obstacle_collision = False
-            for obstacle in self.game.obstacle:
-                if temp_rect.colliderect(obstacle.rect):
-                    obstacle_collision = True
-                    break
-            if obstacle_collision:
-                continue
-                
-            # Verifica colisão com água
-            water_collision = False
-            for water in self.game.water:
-                if temp_rect.colliderect(water.rect):
-                    water_collision = True
-                    break
-            if water_collision:
-                continue
-                
-            # Verifica colisão com outros inimigos (opcional)
-            enemy_collision = False
-            for enemy in self.game.enemies:
-                if enemy != self and temp_rect.colliderect(enemy.rect):
-                    enemy_collision = True
-                    break
-            if enemy_collision:
-                continue
-                
-            # Se passou em todas as verificações, teleporta
-            self.rect.centerx = new_x
-            self.rect.centery = new_y
-            self.last_teleport_time = pygame.time.get_ticks()
-            self.state = 'crouching'
-            self.current_frame = 0
+        # Calcula direção baseada na posição do jogador
+        if hasattr(self.game, 'player'):
+            player_x, player_y = self.game.player.rect.center
+            dx = player_x - ox
+            dy = player_y - oy
+            dist = math.hypot(dx, dy)
+            if dist > 0:
+                dir_x = dx / dist
+                dir_y = dy / dist
+            else:
+                dir_x, dir_y = 1, 0  # fallback
+        else:
+            dir_x, dir_y = 1, 0  # fallback
 
-             # cria um "explodir" de partículas no ponto atual (antes de sumir)
-            for _ in range(20):
-                TeleportParticle(self.game, self.rect.centerx, self.rect.centery)
+        # define distância máxima (pode ajustar)
+        max_dist_pixels = 200
 
-            # realiza o teleporte (muda a posição)
-            self.rect.centerx = new_x
-            self.rect.centery = new_y
-            self.last_teleport_time = pygame.time.get_ticks()
-            self.state = 'crouching'
-            self.current_frame = 0
+        desired_x = ox + dir_x * max_dist_pixels
+        desired_y = oy + dir_y * max_dist_pixels
 
-            #partículas no ponto de chegada ----------
-            for _ in range(20):
-                TeleportParticle(self.game, int(new_x), int(new_y))
+        desired_x, desired_y = clamp_to_map(desired_x, desired_y)
 
-            return
+        # verifica linha de visão
+        if not line_is_clear(ox, oy, desired_x, desired_y):
+            steps = 12
+            found = False
+            for i in range(steps - 1, 0, -1):
+                t = i / steps
+                sx = ox + (desired_x - ox) * t
+                sy = oy + (desired_y - oy) * t
+                if line_is_clear(ox, oy, sx, sy):
+                    desired_x, desired_y = sx, sy
+                    found = True
+                    break
+            if not found:
+                fallback = find_nearest_allowed(desired_x, desired_y)
+                if fallback:
+                    desired_x, desired_y = fallback
+                else:
+                    return False
+
+        # checa tile final
+        ttx, tty = world_to_tile(desired_x, desired_y)
+        if not is_tile_allowed(ttx, tty):
+            fallback = find_nearest_allowed(desired_x, desired_y)
+            if fallback:
+                desired_x, desired_y = fallback
+            else:
+                return False
+
+        # Cria partículas de teleporte na posição original
+        for _ in range(8):
+            TeleportParticle(self.game, ox, oy)
+
+        # aplica teleporte
+        self.rect.center = (int(desired_x), int(desired_y))
+
+        # Cria partículas de teleporte na nova posição
+        for _ in range(8):
+            TeleportParticle(self.game, self.rect.centerx, self.rect.centery)
+
+        return True
+
 
     def shoot(self):
         now = pygame.time.get_ticks()
@@ -3037,7 +3139,8 @@ class ArcherTP(pygame.sprite.Sprite):
         
         # Teleporte
         if now - self.last_teleport_time >= self.teleport_cooldown:
-            self.teleport()
+            if self.teleport():
+                self.last_teleport_time = now
         
         # Ataque (dispara independente do teleporte)
         if now - self.last_attack_time >= self.attack_cooldown:
@@ -3162,9 +3265,9 @@ class TeleportParticle(pygame.sprite.Sprite):
         self.image.fill((128, 0, 128, 180))  # Roxo com transparência
         self.rect = self.image.get_rect(center=(self.x, self.y))
 
-        self.vel_x = random.uniform(-2, 2)
-        self.vel_y = random.uniform(-2, 2)
-        self.lifetime = random.randint(400, 800)  # em ms
+        self.vel_x = random.uniform(-4, 4)
+        self.vel_y = random.uniform(-4, 4)
+        self.lifetime = random.randint(400, 700)  # em ms
         self.spawn_time = pygame.time.get_ticks()
 
     def update(self):
@@ -3174,3 +3277,142 @@ class TeleportParticle(pygame.sprite.Sprite):
         # Desaparece depois do tempo de vida
         if pygame.time.get_ticks() - self.spawn_time > self.lifetime:
             self.kill()
+# sprites.py - Adicione no final do arquivo ou em um local apropriado
+
+class Pet(pygame.sprite.Sprite):
+    def __init__(self, game, x, y):
+        self.ready = False
+        self.spawn_time = pygame.time.get_ticks()
+
+        self.game = game
+        self._layer = PET_LAYER
+        # Adiciona ao grupo do Petf (LayeredUpdates) e ao grupo geral
+        self.groups = self.game.all_sprites, self.game.petf
+        pygame.sprite.Sprite.__init__(self, self.groups)
+
+        self.width = PET_SIZE
+        self.height = PET_SIZE
+        self.speed = 2.5 # Velocidade de acompanhamento
+
+        # Controle de Animação
+        self.animation_speed = 15
+        self.animation_counter = 0
+        self.current_frame = 0
+
+        # Carregar animações
+        self.load_animations()
+
+        # Imagem inicial e Rect
+        self.image = self.animation_frames[0]
+        self.image.set_colorkey(BLACK)
+        self.rect = self.image.get_rect()
+        
+        # Cria o pet próximo ao jogador (a 16 pixels de distância)
+        player = self.game.player
+        self.rect.center = (player.rect.centerx + 16, player.rect.centery + 16)
+
+
+    def load_animations(self):
+        # A spritesheet 'petf_spritesheet' foi carregada em main.py
+        # As coordenadas são (x:1, y:1) e (x:1, y:15) para sprites 15x15
+        
+        # Frame 1: x=1, y=1, size=15x15
+        frame1_raw = self.game.petf_spritesheet.get_sprite(1, 1, 15, 15)
+        # Frame 2: x=1, y=15, size=15x15
+        frame2_raw = self.game.petf_spritesheet.get_sprite(1, 15, 15, 15)
+
+        # Redimensiona para o tamanho final e armazena
+        self.animation_frames = [
+            pygame.transform.scale(frame1_raw, (self.width, self.height)),
+            pygame.transform.scale(frame2_raw, (self.width, self.height))
+        ]
+
+    def animate(self):
+        self.animation_counter += 1
+
+        if self.animation_counter >= self.animation_speed:
+            self.animation_counter = 0
+            self.current_frame = (self.current_frame + 1) % len(self.animation_frames)
+            self.image = self.animation_frames[self.current_frame]
+            self.image.set_colorkey(BLACK)
+            # Mantém a posição
+            old_center = self.rect.center
+            self.rect = self.image.get_rect()
+            self.rect.center = old_center
+
+    def follow_player(self):
+        if hasattr(self.game, 'player') and self.game.player:
+            player_center = self.game.player.rect.center
+            pet_center = self.rect.center
+
+            dx = player_center[0] - pet_center[0]
+            dy = player_center[1] - pet_center[1]
+            dist = math.hypot(dx, dy)
+
+            # Só se move se estiver a mais de 20 pixels do player
+            if dist > 20:
+                if dist != 0:
+                    # Normaliza e aplica a velocidade
+                    move_x = (dx / dist) * self.speed
+                    move_y = (dy / dist) * self.speed
+                    
+                    self.rect.x += move_x
+                    self.rect.y += move_y
+
+    def update(self):
+        self.follow_player()
+        self.animate()
+
+
+class FireArea(pygame.sprite.Sprite):
+    def __init__(self, game, center_x, center_y):
+        self.game = game
+        self._layer = ENEMY_LAYER # Abaixo do jogador (6) e do Pet (7), acima do chão
+        self.groups = self.game.all_sprites, self.game.fire_areas
+        pygame.sprite.Sprite.__init__(self, self.groups)
+        
+        # 3x3 tiles
+        self.tile_size = TILESIZES * PET_FIRE_AREA_TILE_SIZE
+        self.width = self.tile_size
+        self.height = self.tile_size
+        self.damage = PET_FIRE_AREA_DAMAGE
+
+        # Cria a imagem de fogo
+        self.image = pygame.Surface([self.width, self.height], pygame.SRCALPHA)
+        # Desenha um círculo/quadrado simples, você pode substituir por uma animação de spritesheet
+        radius = self.width // 2
+        pygame.draw.circle(self.image, RED_FIRE, (radius, radius), radius, 0)
+        
+        self.rect = self.image.get_rect()
+        self.rect.center = (center_x, center_y) # Centraliza na posição do player
+        
+        # Temporizadores
+        self.start_time = pygame.time.get_ticks()
+        self.lifetime = PET_FIRE_AREA_LIFETIME
+        self.last_damage_time = self.start_time
+        self.damage_interval = PET_FIRE_DAMAGE_INTERVAL
+        
+    def apply_damage(self):
+        now = pygame.time.get_ticks()
+        if now - self.last_damage_time >= self.damage_interval:
+            self.last_damage_time = now
+            
+            enemies_to_damage = []
+            
+            # Colisão com inimigos, morcegos e bosses
+            enemies_to_damage.extend(pygame.sprite.spritecollide(self, self.game.enemies, False))
+            enemies_to_damage.extend(pygame.sprite.spritecollide(self, self.game.bats, False))
+            enemies_to_damage.extend(pygame.sprite.spritecollide(self, self.game.bosses, False))
+            
+            # Aplica o dano a cada inimigo atingido
+            for enemy in enemies_to_damage:
+                # O inimigo deve ter um método take_damage (assumido)
+                if hasattr(enemy, 'take_damage'):
+                    enemy.take_damage(self.damage)
+            
+    def update(self):
+        self.apply_damage()
+        
+        # Verifica o tempo de vida
+        if pygame.time.get_ticks() - self.start_time >= self.lifetime:
+            self.kill() 
