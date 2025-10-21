@@ -7,7 +7,7 @@ from network import Server, Client
 from ui_elements import InputBox
 import socket
 
-
+# 6 milhões de linhas? nem, no máximo 271 mil.
 class Game:
     def __init__(self):
         pygame.mixer.init()
@@ -65,6 +65,7 @@ class Game:
         self.watermelon = pygame.sprite.LayeredUpdates()
         self.particles = pygame.sprite.LayeredUpdates() 
         self.teleport_mobs = pygame.sprite.LayeredUpdates()
+        self.petf = pygame.sprite.LayeredUpdates()
         self.obstacle = pygame.sprite.LayeredUpdates()
         
         self.house_interior_spritesheet = Spritesheet('sprt/img/gameover.png')
@@ -79,6 +80,7 @@ class Game:
         self.terrain_spritesheet = Spritesheet('sprt/terrain/terrain.png')
         self.obstacle_spritesheet = Spritesheet('sprt/terrain/TreesSpr.png')
         self.portal_spritsheet = Spritesheet('sprt/terrain/portalpurplespr.png')
+        self.petf_spritesheet = Spritesheet('sprt/npc/pet_fire.png')
         self.enemy_spritesheet = Spritesheet('sprt/img/enemy.png')
         self.enemycoin_spritesheet = Spritesheet('sprt/img/enemy.png')
         self.archertp_spritesheet = Spritesheet('sprt/npc/archertpSPR.png')
@@ -96,6 +98,8 @@ class Game:
         self.ability_panel = AbilityPanel(self)
         self.current_level = 1
         self.max_levels = 6
+        self.global_attack_counter = 0 # Contador global de ataques
+        self.player_has_pet = False
 
     def save_player_state(self):
         if not hasattr(self, 'player'): return {}
@@ -132,6 +136,55 @@ class Game:
         self.fire_areas.empty()
         self.other_players.clear()
         self.particles.empty()
+
+    def handle_player_attack(self):
+        import math
+
+        # só procede se o jogador tiver o pet ativo
+        if not getattr(self, 'player_has_pet', False):
+            return
+
+        # acha o pet no mapa
+        pet = next((s for s in self.petf if isinstance(s, Pet)), None)
+        if not pet or not hasattr(self, 'player') or not self.player:
+            return
+
+        # calcula posição 25px à frente do player
+        px, py = self.player.rect.centerx, self.player.rect.centery
+        offset = 25
+        try:
+            mx, my = pygame.mouse.get_pos()
+            dx, dy = mx - px, my - py
+            dist = math.hypot(dx, dy)
+            if dist > 5:
+                fx, fy = (dx / dist) * offset, (dy / dist) * offset
+            else:
+                facing = getattr(self.player, 'facing', 'down')
+                if facing == 'up':   fx, fy = 0, -offset
+                elif facing == 'down': fx, fy = 0, offset
+                elif facing == 'left': fx, fy = -offset, 0
+                else: fx, fy = offset, 0
+        except Exception:
+            facing = getattr(self.player, 'facing', 'down')
+            if facing == 'up':   fx, fy = 0, -offset
+            elif facing == 'down': fx, fy = 0, offset
+            elif facing == 'left': fx, fy = -offset, 0
+            else: fx, fy = offset, 0
+
+        fire_x = max(0, min(WIN_WIDTH, int(px + fx)))
+        fire_y = max(0, min(WIN_HEIGHT, int(py + fy)))
+
+        # cria área de fogo imediatamente
+        FireArea(self, fire_x, fire_y,
+                PET_FIRE_AREA_DAMAGE,
+                PET_FIRE_AREA_LIFETIME,
+                PET_FIRE_DAMAGE_INTERVAL)
+
+
+
+
+        
+
     
    # Método para entrar na casa ---
     def enter_house(self, house_sprite):
