@@ -30,7 +30,23 @@ ENEMY_SPEED = 1
 BAT_SPEED = 6
 NERO_SPEED = 4
 #DAMAGE
-#PLAYER_DAMAGE = 4
+
+
+#pet
+PET_LAYER = 7 # Camada para o pet (acima do player)
+PET_SIZE = 15 # Tamanho do pet em pixels (15x15)
+PET_FIRE_ATTACK_COUNT = 3 # Número de ataques para ativar a habilidade
+PET_COST = 7 # Custo para comprar na store (exemplo)
+
+# PET FIRE AREA CONFIGURATION
+PET_FIRE_AREA_TILE_SIZE = 3 # Tamanho da área de fogo em tiles (3x3)
+PET_FIRE_AREA_DAMAGE = 15 # Dano por tick
+PET_FIRE_AREA_LIFETIME = 2500 # Duração da área de fogo em ms
+PET_FIRE_DAMAGE_INTERVAL = 500 # Intervalo de dano da área de fogo em ms
+
+
+RED_FIRE = (255, 69, 0) # Cor para a área de fogo
+
 
 
 NERO_WHIP_DAMAGE = 2 # Dano do chicote
@@ -50,14 +66,14 @@ CHAR_SELECT_FONT_SIZE = 36
 CHAR_DESC_FONT_SIZE = 22
 CHAR_ARROW_SIZE = 50
 # Personagens
-ARCHERTP_LIFE = 50
-ARCHERTP_DAMAGE = 8
+ARCHERTP_LIFE = 40
+ARCHERTP_DAMAGE = 2
 ARCHERTP_SPEED = 2 # Velocidade de movimento, embora ele se teleporte
 ARCHERTP_TELEPORT_COOLDOWN = 4000 # 4 segundos em milissegundos
-ARCHERTP_TELEPORT_RANGE = 400 # Raio de teleporte em pixels
+ARCHERTP_TELEPORT_RANGE = 500 # Raio de teleporte em pixels
 ARCHERTP_ANIMATION_SPEED = 12
 ARCHERTP_ATTACK_COOLDOWN = 1500 # 1.5 segundos
-ARCHERTP_PROJECTILE_SPEED = 8
+ARCHERTP_PROJECTILE_SPEED = 7
 # Atributos dos personagens
 
 PLAYER1_ATTR = {
@@ -75,7 +91,7 @@ PLAYER1_ATTR = {
 PLAYER2_ATTR = {
     "name": "Emma",
     "life": 18,
-    "damage": 7,
+    "damage": 5,
     "speed": 5,
     "sprite": "sprt/PLAYERS/player2tst.png",
     # ALTERADO para a spritesheet do arqueiro
@@ -202,8 +218,8 @@ MUSIC_LEVELS = {
 #fases
 tilemap = [
     'BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB',
-    'B......O..................A.....M................B',
-    'B.P.....O........................................B',
+    'B......O....V...................M................B',
+    'B.P.....O.............A..........................B',
     'B....S...O.......................................B',
     'BOQQOOOOO........................................B',
     'B..Q....C........................................B',
@@ -239,7 +255,7 @@ tilemap2 = [
     'B......WWWW..WWWWWWWWWWWWWWWWWWWWWWWW....C..QQ...B',
     'B.C....WQWWWWWWWW!.Z...........WWWWWWW...C..WWQ..B',
     'B....WWWQWWWWW..................WWQQWW......WW...B',
-    'B......ZWQQWW.............C.......QQQ....W..WZ...B',
+    'B......ZWQQWW.........A...C.......QQQ....W..WZ...B',
     'B.....!WWWWWW....................QWW.........W...B',
     'B.....QWQQWWW..........E.........WWWWWW.....WWWQ.B',
     'B.....WWWWWWWWWWWWWW...........ZWWWWWW...WWWWW...B',
