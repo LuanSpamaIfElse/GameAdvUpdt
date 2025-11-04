@@ -84,7 +84,7 @@ class Game:
         self.enemy_spritesheet = Spritesheet('sprt/img/enemy.png')
         self.enemycoin_spritesheet = Spritesheet('sprt/img/enemy.png')
         self.archertp_spritesheet = Spritesheet('sprt/npc/archertpSPR.png')
-        self.bossnero = Spritesheet('sprt/npc/mm-crawl.png')
+        self.bossnero = Spritesheet('sprt/npc/neroboss.png')
         self.bats_spritesheet = Spritesheet('sprt/npc/bat.png')
         self.coin = Spritesheet('sprt/img/coin_spr.png')
         self.attack_spritsheet = Spritesheet('sprt/guts-spr-full_noise1_scale.png')
@@ -96,11 +96,43 @@ class Game:
         self.seller_spritesheet = Spritesheet('sprt/npc/seller.png')
         
         self.ability_panel = AbilityPanel(self)
+
+        self.camera_x = 0
+        self.camera_y = 0
+
         self.current_level = 1
         self.max_levels = 6
         self.global_attack_counter = 0 # Contador global de ataques
         self.player_has_pet = False
 
+    def get_map_dimensions(self):
+        """Retorna a largura e altura total do mapa atual em pixels."""
+        if self.is_in_house:
+            current_map = house_interior_map
+        elif getattr(self, 'loading_store', False):
+            current_map = store
+        elif self.current_level == 1:
+            current_map = tilemap
+        elif self.current_level == 2:
+            current_map = tilemap2
+        # ... (Adicione os outros tilemaps aqui, se necessário)
+        elif self.current_level == 3:
+            current_map = tilemap3
+        elif self.current_level == 4:
+            current_map = tilemap4
+        elif self.current_level == 5:
+            current_map = tilemap5
+        else: # Default ou boss_arena
+            current_map = boss_arena
+
+        map_height_tiles = len(current_map)
+        map_width_tiles = len(current_map[0])
+        
+        map_width_pixels = map_width_tiles * TILESIZES
+        map_height_pixels = map_height_tiles * TILESIZES
+        
+        return map_width_pixels, map_height_pixels
+    
     def save_player_state(self):
         if not hasattr(self, 'player'): return {}
         return {
@@ -827,6 +859,18 @@ class Game:
             # então a câmera os moverá corretamente junto com o resto do cenário.
 
     def draw(self):
+
+        for sprite in self.all_sprites:
+            # O rect é desenhado em (posição do mundo - offset da câmera)
+            # Isto faz com que o canto superior esquerdo da tela (0,0) corresponda
+            # ao ponto (camera_x, camera_y) do mundo.
+            if sprite not in self.snowflakes:
+                self.screen.blit(sprite.image, 
+                                 (sprite.rect.x - self.camera_x, 
+                                  sprite.rect.y - self.camera_y))
+            else:
+                # Snowflakes (e outros itens de tela) não precisam de offset
+                self.screen.blit(sprite.image, sprite.rect)
         self.screen.fill(BLACK)
         
         # Desenha todos os sprites (incluindo o jogador local e os outros jogadores)
