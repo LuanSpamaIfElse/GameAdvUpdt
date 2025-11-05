@@ -172,14 +172,13 @@ class Game:
     def handle_player_attack(self):
         import math
 
-        # só procede se o jogador tiver o pet ativo
         if not getattr(self, 'player_has_pet', False):
             return
 
-        # acha o pet no mapa
         pet = next((s for s in self.petf if isinstance(s, Pet)), None)
         if not pet or not hasattr(self, 'player') or not self.player:
             return
+        
 
         # calcula posição 25px à frente do player
         px, py = self.player.rect.centerx, self.player.rect.centery
@@ -207,10 +206,7 @@ class Game:
         fire_y = max(0, min(WIN_HEIGHT, int(py + fy)))
 
         # cria área de fogo imediatamente
-        FireArea(self, fire_x, fire_y,
-                PET_FIRE_AREA_DAMAGE,
-                PET_FIRE_AREA_LIFETIME,
-                PET_FIRE_DAMAGE_INTERVAL)
+        FireArea(self, fire_x, fire_y)
 
 
 
@@ -741,7 +737,11 @@ class Game:
             elif self.player.facing == 'down': Boxing(self, self.player.rect.x, self.player.rect.y + TILESIZES)
             elif self.player.facing == 'right': Boxing(self, self.player.rect.x + TILESIZES, self.player.rect.y)
             elif self.player.facing == 'left': Boxing(self, self.player.rect.x - TILESIZES, self.player.rect.y)
-
+        
+        self.global_attack_counter += 1
+        if self.player_has_pet and self.global_attack_counter >= PET_FIRE_ATTACK_COUNT:
+            self.handle_player_attack()
+            self.global_attack_counter = 0
     def update(self):
         if self.paused:
             return
