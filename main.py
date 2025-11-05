@@ -172,38 +172,31 @@ class Game:
     def handle_player_attack(self):
         import math
 
+        # só procede se o jogador tiver o pet ativo
         if not getattr(self, 'player_has_pet', False):
             return
 
+        # acha o pet no mapa
         pet = next((s for s in self.petf if isinstance(s, Pet)), None)
         if not pet or not hasattr(self, 'player') or not self.player:
             return
-        
 
         # calcula posição 25px à frente do player
         px, py = self.player.rect.centerx, self.player.rect.centery
+        facing = self.player.facing
         offset = 25
-        try:
-            mx, my = pygame.mouse.get_pos()
-            dx, dy = mx - px, my - py
-            dist = math.hypot(dx, dy)
-            if dist > 5:
-                fx, fy = (dx / dist) * offset, (dy / dist) * offset
-            else:
-                facing = getattr(self.player, 'facing', 'down')
-                if facing == 'up':   fx, fy = 0, -offset
-                elif facing == 'down': fx, fy = 0, offset
-                elif facing == 'left': fx, fy = -offset, 0
-                else: fx, fy = offset, 0
-        except Exception:
-            facing = getattr(self.player, 'facing', 'down')
-            if facing == 'up':   fx, fy = 0, -offset
-            elif facing == 'down': fx, fy = 0, offset
-            elif facing == 'left': fx, fy = -offset, 0
-            else: fx, fy = offset, 0
 
-        fire_x = max(0, min(WIN_WIDTH, int(px + fx)))
-        fire_y = max(0, min(WIN_HEIGHT, int(py + fy)))
+        if facing == 'up':
+            fx, fy = 0, -offset
+        elif facing == 'down':
+            fx, fy = 0, offset
+        elif facing == 'left':
+            fx, fy = -offset, 0
+        else:
+            fx, fy = offset, 0
+
+        fire_x = int(px + fx)
+        fire_y = int(py + fy)
 
         # cria área de fogo imediatamente
         FireArea(self, fire_x, fire_y)
