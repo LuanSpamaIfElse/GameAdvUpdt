@@ -95,7 +95,7 @@ PLAYER2_ATTR = {
     "speed": 5,
     "sprite": "sprt/PLAYERS/player2tst.png",
     # ALTERADO para a spritesheet do arqueiro
-    "animation_sheet": "sprt/img/character.png", 
+    "animation_sheet": "sprt/PLAYERS/character(2).png", 
     "description": "Dispara flechas com uma mira precisa",
     "type": "archer"
 }
@@ -180,7 +180,7 @@ ABILITY_FONT_SIZE = 18
 
 # --- Loja do Vendedor ---
 SHOP_WIDTH = 480
-SHOP_HEIGHT = 400
+SHOP_HEIGHT = 465
 SHOP_X = WIN_WIDTH // 2 - SHOP_WIDTH // 2
 SHOP_Y = WIN_HEIGHT // 2 - SHOP_HEIGHT // 2
 SHOP_BG_COLOR = UI_BG_COLOR
@@ -207,6 +207,20 @@ DIALOG_TEXT_SPEED = 2
 
 
 # audios song
+
+BACK_SONGS = {
+    # Quando Nero levar dano (uso alternativo de hit ou belch)
+    'nero_hit': 'audios/hit-boss.wav',
+    'nero_belch': 'audios/belch-boss.wav',
+    # Quando o player morrer
+    'player_death': 'audios/death-player-sound.wav',
+    # Quando o player levar um ataque (dano)
+    'player_hit': 'audios/hit-player.wav',
+    # Ao coletar moeda
+    'pCoin': 'audios/pickupCoin.wav',
+    # Ao utilizar o portal
+    'PTranspt': 'audios/portal-transport.wav'
+}
 MUSIC_LEVELS = {
     1: 'audios/som_da_floresta (mp3).mp3',
     2: 'audios/ambiente1swamp.mp3',
@@ -218,7 +232,7 @@ MUSIC_LEVELS = {
 #fases
 tilemap = [
     'BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB',
-    'B......O....V...................M................B',
+    'B......O........................M................B',
     'B.P.....O.............A..........................B',
     'B....S...O.......................................B',
     'BOQQOOOOO........................................B',
