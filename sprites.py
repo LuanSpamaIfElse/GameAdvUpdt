@@ -150,7 +150,15 @@ class Player(pygame.sprite.Sprite):
             self.life -= amount
             self.invulnerable = True
             self.invulnerable_time = pygame.time.get_ticks()
+
+            # --- TOCAR SOM DE DANO ---
+            if self.game and hasattr(self.game, 'play_sound'):
+                self.game.play_sound('player_hit')
+
+            # --- PLAYER MORREU ---
             if self.life <= 0:
+                if self.game and hasattr(self.game, 'play_sound'):
+                    self.game.play_sound('player_death')
                 self.kill()
     def activate_special_arrows(self):
         if self.char_type == 'archer' and pygame.time.get_ticks() - self.last_special_arrows_time >= SPECIAL_ARROW_COOLDOWN:
@@ -776,7 +784,9 @@ class Portal(pygame.sprite.Sprite):
         if self.active and hasattr(self.game, 'player') and not self.activated:
             if pygame.sprite.collide_rect(self, self.game.player):
                 self.activated = True
-                pygame.time.delay(300)
+                pygame.time.delay(200)
+
+                self.game.play_sound('PTransport')
             
                 if self.game.is_in_house:
                     self.game.exit_house()
@@ -1675,6 +1685,10 @@ class Nero(pygame.sprite.Sprite):
 
         self.direction = 1  # 1 para baixo, -1 para cima
 
+#sound config
+        self.last_sound_time = 0
+        self.next_sound_delay = random.randint(3000, 9000)
+
         self.has_spawned_minions = False
 
         self.attack_cooldown = 2000
@@ -1747,6 +1761,18 @@ class Nero(pygame.sprite.Sprite):
 
         if self.life <= 0:
             self.kill()
+
+        current_time = pygame.time.get_ticks()
+
+        if self.life > 0:  # Nero está vivo
+            if current_time - self.last_sound_time >= self.next_sound_delay:
+
+                sound_choice = random.choice(['nero_hit', 'nero_belch'])
+                self.game.play_sound(sound_choice)
+
+                self.last_sound_time = current_time
+                self.next_sound_delay = random.randint(3000, 9000)
+
     def check_for_minion_spawn(self):
         # Verifica se a vida está abaixo de 30% e se os inimigos ainda não foram invocados
         if (self.life / self.max_life) <= 0.5 and not self.has_spawned_minions:
@@ -1816,7 +1842,14 @@ class Nero(pygame.sprite.Sprite):
             
         player_pos = self.game.player.rect.center
         # Cria a área de fogo na posição do jogador
-        FireArea(self.game, player_pos[0], player_pos[1], NERO_FIRE_DAMAGE, FIRE_AREA_LIFETIME, FIRE_DAMAGE_INTERVAL)
+        FireArea(
+            self.game,
+            player_pos[0],
+            player_pos[1],
+            NERO_FIRE_DAMAGE,
+            FIRE_AREA_LIFETIME,
+            FIRE_DAMAGE_INTERVAL
+        )
         
         self.attacking = False
 
@@ -1872,44 +1905,6 @@ class Nero(pygame.sprite.Sprite):
         pygame.draw.rect(self.game.screen, HEALTH_BAR_BG_COLOR, bg_rect)
         if health_width > 0:
             pygame.draw.rect(self.game.screen, HEALTH_COLOR_HIGH, health_rect)
-
-class FireArea(pygame.sprite.Sprite):
-    def __init__(self, game, x, y, damage, lifetime, damage_interval):
-        self.game = game
-        self._layer = GROUND_LAYER # Ou uma camada acima para visibilidade
-        self.groups = self.game.all_sprites, self.game.fire_areas
-        pygame.sprite.Sprite.__init__(self, self.groups)
-
-        self.x = x
-        self.y = y
-        self.width = TILESIZES +32 # Tamanho da área de fogo
-        self.height = TILESIZES +32
-
-        self.damage = damage
-        self.lifetime = lifetime
-        self.damage_interval = damage_interval
-        self.spawn_time = pygame.time.get_ticks()
-        self.last_damage_time = pygame.time.get_ticks()
-
-        # Representação: um quadrado laranja/vermelho
-        self.image = pygame.Surface([self.width, self.height], pygame.SRCALPHA)
-        self.image.fill((255, 100, 0, 150)) # Laranja transparente
-        self.rect = self.image.get_rect()
-        self.rect.center = (self.x, self.y)
-
-    def update(self):
-        # Verifica o tempo de vida da área de fogo
-        if pygame.time.get_ticks() - self.spawn_time > self.lifetime:
-            self.kill()
-
-        if hasattr(self.game, 'player') and self.rect.colliderect(self.game.player.rect):
-            self.deal_damage()
-
-    def deal_damage(self):
-        now = pygame.time.get_ticks()
-        if now - self.last_damage_time > self.damage_interval:
-            self.game.player.life -= self.damage
-            self.last_damage_time = now
 
 class SwordAttack(pygame.sprite.Sprite):
     def __init__(self, game, x, y):
@@ -2725,7 +2720,9 @@ class Coin(pygame.sprite.Sprite):
         # Verifica colisão com o jogador
         if hasattr(self.game, 'player'):
             if pygame.sprite.collide_rect(self, self.game.player):
-                self.game.player.coins += 1  # Incrementa contador de moedas
+                self.game.player.coins += 1  
+                self.game.play_sound('pCoin')
+                # Incrementa contador de moedas
                 self.kill()
         
         # Verifica tempo de vida
@@ -3365,9 +3362,9 @@ class Pet(pygame.sprite.Sprite):
 
 
 class FireArea(pygame.sprite.Sprite):
-    def __init__(self, game, center_x, center_y):
+    def __init__(self, game, center_x, center_y, damage=PET_FIRE_AREA_DAMAGE, lifetime=PET_FIRE_AREA_LIFETIME, interval=PET_FIRE_DAMAGE_INTERVAL):
         self.game = game
-        self._layer = ENEMY_LAYER # Abaixo do jogador (6) e do Pet (7), acima do chão
+        self._layer = ENEMY_LAYER
         self.groups = self.game.all_sprites, self.game.fire_areas
         pygame.sprite.Sprite.__init__(self, self.groups)
         
@@ -3375,22 +3372,28 @@ class FireArea(pygame.sprite.Sprite):
         self.tile_size = TILESIZES * PET_FIRE_AREA_TILE_SIZE
         self.width = self.tile_size
         self.height = self.tile_size
-        self.damage = PET_FIRE_AREA_DAMAGE
+        self.damage = damage
 
-        # Cria a imagem de fogo
+        # Cria a imagem de fogo COM TRANSPARÊNCIA
         self.image = pygame.Surface([self.width, self.height], pygame.SRCALPHA)
-        # Desenha um círculo/quadrado simples, você pode substituir por uma animação de spritesheet
         radius = self.width // 2
-        pygame.draw.circle(self.image, RED_FIRE, (radius, radius), radius, 0)
+        
+        # Cores com transparência - versão mais suave
+        fire_color = (255, 69, 0,80)    # Vermelho alaranjado com 120/255 de alpha
+        inner_color = (255, 140, 0, 40)   # Laranja mais claro com 80/255 de alpha
+        
+        # Desenha círculos concêntricos com transparência
+        pygame.draw.circle(self.image, fire_color, (radius, radius), radius)
+        pygame.draw.circle(self.image, inner_color, (radius, radius), radius - 10)
         
         self.rect = self.image.get_rect()
-        self.rect.center = (center_x, center_y) # Centraliza na posição do player
+        self.rect.center = (center_x, center_y)
         
         # Temporizadores
         self.start_time = pygame.time.get_ticks()
-        self.lifetime = PET_FIRE_AREA_LIFETIME
+        self.lifetime = lifetime
         self.last_damage_time = self.start_time
-        self.damage_interval = PET_FIRE_DAMAGE_INTERVAL
+        self.damage_interval = interval
         
     def apply_damage(self):
         now = pygame.time.get_ticks()
@@ -3404,15 +3407,20 @@ class FireArea(pygame.sprite.Sprite):
             enemies_to_damage.extend(pygame.sprite.spritecollide(self, self.game.bats, False))
             enemies_to_damage.extend(pygame.sprite.spritecollide(self, self.game.bosses, False))
             
-            # Aplica o dano a cada inimigo atingido
             for enemy in enemies_to_damage:
-                # O inimigo deve ter um método take_damage (assumido)
                 if hasattr(enemy, 'take_damage'):
                     enemy.take_damage(self.damage)
             
     def update(self):
         self.apply_damage()
         
+        # Efeito de pulsação para melhor visualização
+        current_time = pygame.time.get_ticks()
+        pulse = (math.sin(current_time * 0.01) + 1) * 0.2 + 0.6  # Pulsa entre 0.6 e 1.0
+        
+        # Atualiza a transparência baseada no pulso
+        self.image.set_alpha(int(120 * pulse))
+        
         # Verifica o tempo de vida
         if pygame.time.get_ticks() - self.start_time >= self.lifetime:
-            self.kill() 
+            self.kill()
