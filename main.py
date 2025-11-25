@@ -42,6 +42,7 @@ class Game:
 
         # Atributos do jogador (serão definidos na seleção)
         self.player_attrs = {}
+
         
         # NOVOS ATRIBUTOS PARA O MULTIPLAYER
         self.network = None
@@ -95,6 +96,14 @@ class Game:
         self.slimenpc = Spritesheet('sprt/npc/slime_spr.png')
         self.seller_spritesheet = Spritesheet('sprt/npc/seller.png')
         
+        self.sounds = {}
+        for key, path in BACK_SONGS.items():
+            try:
+                self.sounds[key] = pygame.mixer.Sound(path)
+                self.sounds[key].set_volume(0.4)   
+            except Exception as e:
+                print(f"Erro ao carregar som {key}: {e}")
+
         self.ability_panel = AbilityPanel(self)
 
         self.camera_x = 0
@@ -152,7 +161,14 @@ class Game:
         self.player.speed_boost = state["speed_boost"]
         self.player.attack_cooldown_multiplier = state["attack_cooldown_multiplier"]
         self.player.dodge_cooldown_multiplier = state["dodge_cooldown_multiplier"]
-
+    def play_sound(self, sound_key):
+        if sound_key in self.sounds:
+            try:
+                self.sounds[sound_key].play()
+            except Exception as e:
+                print(f"Erro ao tocar som '{sound_key}': {e}")
+        else:
+            print(f"Som '{sound_key}' não encontrado!")
     # --- NOVO: Limpa todos os sprites ---
     def clear_all_sprites(self):
         self.all_sprites.empty()
